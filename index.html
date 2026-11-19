@@ -162,7 +162,7 @@ label.chk{display:flex;gap:8px;align-items:center;justify-content:center;font-si
   <p>Bu kodu bir yere kopyala. Başka bir cihazda ya da kaydın silinirse buraya yapıştırıp karakterini geri yükleyebilirsin.</p>
   <textarea id="codeTxt" readonly style="width:100%;height:64px;border-radius:8px;background:#0006;color:#ffe7b0;border:1px solid #8a6a3a;padding:8px;font:12px monospace;resize:none"></textarea>
   <button class="btn" id="copyBtn">Kopyala</button>
-  <p style="margin-top:12px">Kodu yapıştırıp yükle:</p>
+  <p style="margin-top:12px">Kayıt kodunu ya da hediye kodunu yaz:</p>
   <input id="codeIn" style="width:100%;border-radius:8px;background:#0006;color:#fff;border:1px solid #8a6a3a;padding:10px;font:13px monospace" placeholder="KT1-...">
   <div id="codeMsg" style="min-height:22px;margin-top:6px;font-weight:700"></div>
   <button class="btn" id="loadBtn">Yükle</button><button class="btn g" data-close>Kapat</button>
@@ -292,7 +292,7 @@ function cleanItem(o){if(!o||typeof o!=='object'||!KINDS[o.k])return null;return
 
 // stats
 const S={lvl:1,exp:0,gold:120,plus:0,pots:5,scrolls:1,ts:0,inv:[],eq:null};
-const KEYS=['lvl','exp','gold','plus','pots','scrolls','ts'];
+const KEYS=['lvl','exp','gold','plus','pots','scrolls','ts','gift'];
 const pick=o=>{const r={};for(const k of KEYS)if(typeof o[k]==='number'&&isFinite(o[k]))r[k]=o[k];
   if(Array.isArray(o.inv))r.inv=o.inv.map(cleanItem).filter(Boolean).slice(0,INV);
   if(o.eq&&typeof o.eq==='object'){r.eq={};for(const k of SLOTS){const c=cleanItem(o.eq[k]);if(c&&c.k===k)r.eq[k]=c;}}return r;};
@@ -587,7 +587,11 @@ document.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const k=b.data
 const toCode=()=>'KT1-'+btoa(JSON.stringify(pick(S)));
 $('codeBtn').onclick=()=>{$('codeTxt').value=toCode();$('codeMsg').textContent='';$('codeIn').value='';$('codeP').classList.add('on');};
 $('copyBtn').onclick=()=>{const t=$('codeTxt');t.select();(navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject()).then(()=>{$('codeMsg').style.color='#c9f27a';$('codeMsg').textContent='Kopyalandı ✔';},()=>{$('codeMsg').style.color='#ffe7b0';$('codeMsg').textContent='Kutudaki kodu basılı tutup kopyala.';});};
-$('loadBtn').onclick=()=>{try{const v=$('codeIn').value.trim();if(!v.startsWith('KT1-'))throw 0;const d=pick(JSON.parse(atob(v.slice(4))));if(!d.lvl)throw 0;
+$('loadBtn').onclick=()=>{const g=$('codeIn').value.trim().toUpperCase();
+  if(g==='USTA9'){const m=$('codeMsg');if(S.gift){m.style.color='#ff8a7a';m.textContent='Bu hediye zaten kullanıldı 😉';return;}
+    S.gift=1;S.gold+=150000;S.scrolls+=15;S.pots+=30;save();cloudPush();hud();m.style.color='#ffd77a';m.textContent='🎁 +150.000 altın, 15 Kutsama Kağıdı, 30 İksir!';
+    tone(784,.15);setTimeout(()=>tone(1046,.15),120);setTimeout(()=>tone(1318,.4),240);return;}
+  try{const v=$('codeIn').value.trim();if(!v.startsWith('KT1-'))throw 0;const d=pick(JSON.parse(atob(v.slice(4))));if(!d.lvl)throw 0;
   applySave(d);save();cloudPush();$('codeTxt').value=toCode();$('codeMsg').style.color='#c9f27a';$('codeMsg').textContent=`Yüklendi! Seviye ${S.lvl}`;}
   catch(e){$('codeMsg').style.color='#ff8a7a';$('codeMsg').textContent='Kod geçersiz, tekrar kontrol et.';}};
 $('respawn').onclick=()=>{pl.dead=false;pl.hp=maxHp();pl.pos.set(0,0,4);$('dead').classList.remove('on');hud();};
