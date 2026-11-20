@@ -127,7 +127,7 @@ label.chk{display:flex;gap:8px;align-items:center;justify-content:center;font-si
     <div class="bar" id="hpb"><i></i><span></span></div>
     <div class="bar" id="xpb"><i></i></div>
   </div>
-  <div class="card" id="gold">🪙 0</div>
+  <div class="card" id="gold">🪙 0</div><div class="card" id="tod" style="font-size:15px;padding:5px 7px">☀️</div>
 </div>
 <button class="ui" id="mute">🔊</button>
 <div class="ui" id="bossBar"><div class="bt">💀 Kadim Golem · Sv.20</div><div class="bar"><i></i><span></span></div></div>
@@ -274,7 +274,7 @@ function resize(){const w=document.documentElement.clientWidth||innerWidth,h=inn
 addEventListener('resize',resize);addEventListener('orientationchange',()=>{setTimeout(resize,250);setTimeout(resize,700);});
 if(window.visualViewport)visualViewport.addEventListener('resize',resize);resize();
 
-scene.add(new THREE.HemisphereLight(0xdcecff,0x55663a,.85));
+const hemi=new THREE.HemisphereLight(0xdcecff,0x55663a,.85);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xfff0d0,.85);sun.castShadow=true;
 sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-22,right:22,top:22,bottom:-22,near:1,far:80});
 scene.add(sun,sun.target);
@@ -317,10 +317,11 @@ const TREES=[];let LEAF=null;
     const r=mesh(new THREE.DodecahedronGeometry(s,0),M(0x8a8a86),Math.cos(a)*d,s*.4,Math.sin(a)*d);r.rotation.set(rand(0,3),rand(0,3),0);scene.add(r);if(s>.7)colliders.push({x:r.position.x,z:r.position.z,r:s*.8});}
 })();
 // village
+const winMat=M(0xbfe3ff);
 function house(x,z,rot,wall,roof){const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;
   const w=box(4.2,2.6,3.6,wall,0,1.3,0);w.receiveShadow=true;g.add(w);
   const r=mesh(new THREE.ConeGeometry(3.6,2,4),M(roof),0,3.6,0);r.rotation.y=Math.PI/4;r.scale.set(1.05,1,.92);g.add(r);
-  g.add(box(.9,1.5,.1,0x5a3a1a,0,.75,1.82));g.add(box(.7,.6,.1,0xbfe3ff,1.3,1.6,1.82));g.add(box(.7,.6,.1,0xbfe3ff,-1.3,1.6,1.82));
+  g.add(box(.9,1.5,.1,0x5a3a1a,0,.75,1.82));g.add(box(.7,.6,.1,winMat,1.3,1.6,1.82));g.add(box(.7,.6,.1,winMat,-1.3,1.6,1.82));
   scene.add(g);colliders.push({x,z,r:2.6});}
 house(-9,-7,.6,0xe8d9b5,0x9c3b2a);house(9,-8,-.5,0xdcc9a0,0x7a4a2a);house(-10,7,2.4,0xe2d2ad,0x8a3f2c);house(10,8,-2.3,0xe8d9b5,0x9c3b2a);
 (function well(){const g=new THREE.Group();g.add(mesh(new THREE.CylinderGeometry(1.1,1.2,.9,10),M(0x9a9a92),0,.45,0));
@@ -569,11 +570,13 @@ function beast(t){const g=new THREE.Group(),b=t.boar,p={g,legs:[]};
   if(t.eyes)for(const s of[-1,1])g.add(mesh(new THREE.BoxGeometry(.07,.05,.02),new THREE.MeshBasicMaterial({color:0xff3030}),s*.1,.88,.84,false));
   for(const [x,z] of [[-.16,.36],[.16,.36],[-.16,-.36],[.16,-.36]]){const j=new THREE.Group();j.position.set(x*(b?1.4:1),.42,z);j.add(box(.13,.42,.13,t.dark,0,-.21,0));g.add(j);p.legs.push(j);}
   return p;}
+var isNight=false;
 const mobs=[];
 function spawnMob(type,lvl,x,z,home){const t=TYPES[type],p=beast(t);p.g.position.set(x,0,z);scene.add(p.g);
   const hp=Math.round(t.hp*(1+.35*(lvl-1)));
   const m={type,t,lvl,p,hp,max:hp,dmg:t.dmg*(1+.25*(lvl-1)),exp:Math.round(t.exp*lvl*.9+t.exp*.4),home:home||{x,z},
     state:'idle',wT:rand(1,4),tgt:new V3(x,0,z),atkT:0,flash:0,label:mkLabel(`${t.name} <span style="color:#ffd77a">Sv.${lvl}</span>`),dead:false,anim:rand(0,6),pack:null};
+  if(isNight){m.max=m.hp=Math.round(m.hp*1.35);m.dmg*=1.3;m.exp=Math.round(m.exp*1.5);m.label.firstChild.innerHTML='🌙 '+m.label.firstChild.innerHTML;}
   mobs.push(m);return m;}
 function killMob(m){m.dead=true;m.label.remove();scene.remove(m.p.g);questEv('kill',m.type);
   const mul=m.lvl<S.lvl-5?.25:1;gainExp(Math.round(m.exp*mul));const g=Math.round(rand(3,8)*m.lvl);S.gold+=g;floatTxt(m.p.g.position,`+${g} 🪙`,'#ffd77a',14);
@@ -762,6 +765,26 @@ function checkDaily(){const t=today();if(S.dlast===t)return;const cont=S.dlast&&
   $('dTitle').textContent=`Gün ${streak} ödülün hazır!`;$('dP').classList.add('on');
   $('dBtn').onclick=()=>{const r=DAILY[streak-1];S.gold+=r.gold||0;S.pots+=r.pots||0;S.scrolls+=r.scrolls||0;S.book=(S.book||0)+(r.book||0);S.skb+=r.skb||0;S.soul+=r.soul||0;S.rer+=r.rer||0;
     if(r.item)dropItem(20,pl.pos,r.item.t,r.item.mb);S.dlast=t;S.dstreak=streak;save();hud();$('dP').classList.remove('on');toast(`🎁 Günlük ödül: ${rewTxt(r)}`,'#ffd77a');tone(784,.15);setTimeout(()=>tone(1046,.3),120);};}
+
+// ---------------- DAY / NIGHT ----------------
+const DAYLEN=600,C_DAY=new THREE.Color(0xaecbe0),C_DUSK=new THREE.Color(0xe89a6a),C_NIGHT=new THREE.Color(0x141a34),C_SUN=new THREE.Color(0xfff0d0),C_MOON=new THREE.Color(0x8aa8ff);
+let dayK=1,wasNight=null;
+const starGeo=new THREE.BufferGeometry(),sp=[];for(let i=0;i<400;i++){const a=Math.random()*6.28,e=Math.random()*1.2+.15,r=120;sp.push(Math.cos(a)*Math.cos(e)*r,Math.sin(e)*r,Math.sin(a)*Math.cos(e)*r);}
+starGeo.setAttribute('position',new THREE.Float32BufferAttribute(sp,3));
+const stars3=new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:.6,transparent:true,opacity:0,fog:false,depthWrite:false}));scene.add(stars3);
+const moon=new THREE.Mesh(new THREE.SphereGeometry(5,16,12),new THREE.MeshBasicMaterial({color:0xf4f0dc,fog:false,transparent:true,opacity:0}));scene.add(moon);
+function dayUpdate(){const tod=((Date.now()/1000)%DAYLEN)/DAYLEN,sunH=Math.sin((tod-.25)*Math.PI*2);dayK=clamp(sunH*2.2+.45,0,1);
+  const dusk=clamp(1-Math.abs(sunH)*3.5,0,1);
+  const c=tmpCol.copy(C_NIGHT).lerp(C_DAY,dayK).lerp(C_DUSK,dusk*.55);scene.background.copy(c);scene.fog.color.copy(c);
+  sun.intensity=.18+.7*dayK;sun.color.copy(C_MOON).lerp(C_SUN,dayK);hemi.intensity=.32+.53*dayK;
+  winMat.emissive.setRGB(1*(1-dayK),.75*(1-dayK),.3*(1-dayK));
+  stars3.material.opacity=(1-dayK)*.9;stars3.position.set(pl.pos.x,0,pl.pos.z);
+  moon.material.opacity=1-dayK;moon.position.set(pl.pos.x-60,55,pl.pos.z-80);
+  isNight=dayK<.3;
+  if(wasNight!==null&&isNight!==wasNight&&started)toast(isNight?'🌙 Gece çöktü, canavarlar güçlendi (+%50 EXP)':'☀️ Güneş doğdu','#bfe3ff');
+  wasNight=isNight;$('tod').textContent=isNight?'🌙':dusk>.4?'🌅':'☀️';}
+const tmpCol=new THREE.Color();
+dayUpdate();
 
 // ---------------- player logic ----------------
 function hud(){const mh=maxHp();$('lvl').textContent='Sv.'+S.lvl;$('hpb').querySelector('i').style.width=(pl.hp/mh*100)+'%';$('hpb').querySelector('span').textContent=Math.ceil(pl.hp)+' / '+mh;
@@ -1111,7 +1134,7 @@ $('bPot').querySelector('.cd').style.transform=`scaleY(${pl.potT})`;
   for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.t+=dt;const k=f.t/f.life;
     if(f.spike){f.m.position.y=k<.25?-.6+k/.25*1.0:k>.75?.4-(k-.75)/.25*1.2:.4;}else if(f.up){f.m.position.addScaledVector(f.v,dt);f.m.material.opacity=1-k;f.m.scale.setScalar(1-k*.6);}else if(f.sp){f.v.y-=14*dt;f.m.position.addScaledVector(f.v,dt);f.m.rotation.x+=dt*8;}else{f.m.scale.setScalar(1+k*f.max);f.m.material.opacity=1-k;}
     if(k>=1){scene.remove(f.m);f.m.geometry.dispose();fx.splice(i,1);}}
-  updBoss(dt);updTeles(dt);if(shakeT>0)shakeT-=dt;
+  if((miniT%15)===0)dayUpdate();updBoss(dt);updTeles(dt);if(shakeT>0)shakeT-=dt;
   // camera & sun
   swordFx(dt);const portrait=innerWidth<innerHeight,bz=(bossZ+=((boss.state==='fight'?1.35:1)-bossZ)*Math.min(1,dt*2)),D=(portrait?15:12.5)*camZoom*bz,H=(portrait?18:15)*camPitch*camZoom*bz+.6*(1-camZoom);camOff.set(Math.sin(camYaw)*D,H,Math.cos(camYaw)*D);
   if((miniT=(miniT||0)+1)%3===0){drawMini();occlude();}
