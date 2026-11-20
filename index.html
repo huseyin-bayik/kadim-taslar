@@ -152,7 +152,7 @@ label.chk{display:flex;gap:8px;align-items:center;justify-content:center;font-si
     <label class="chk" style="margin:0"><input type="checkbox" id="autoChk"> 🤖 Kötüleri otomatik sat</label>
     <button class="btn g" id="sellWorse" style="padding:8px 12px;font-size:13px;margin:0">🗑️ Kötüleri sat</button>
   </div>
-  <div style="font-size:11.5px;color:#a99a7a;margin-top:6px">İpucu: Eşyaya iki kez dokun = hızlı giy · ▼ giydiğinden kötü · 🔒 seviyen yetmiyor</div>
+  <div style="font-size:11.5px;color:#a99a7a;margin-top:6px">İpucu: İki kez dokun = hızlı giy · ▼ kötü · 🔒 seviye yetmiyor<br>Giydiğinden yüksek seviyeli ya da daha çok efsunlu eşyalar asla otomatik satılmaz</div>
   <button class="btn g" data-close>Kapat</button>
 </div>
 <div class="pop" id="itPop"><div class="pc" id="itDet"></div></div>
@@ -652,7 +652,9 @@ $('upBtn').onclick=()=>{const it=S.eq[smSel];if(!it)return;const p=it.p,cost=Mat
 // ---- inventory
 let invSel=null,lastTap={i:-1,t:0}; // {from:'inv',i} or {from:'eq',k}
 function openInv(){closePop();renderInv();$('invP').classList.add('on');tone(440,.08);}
-const isWorse=it=>{const cur=S.eq[it.k];return !!cur&&S.lvl>=REQ[it.t]&&itemScore(it)<itemScore(cur);};
+// "worse" = never higher tier, never more efsun, and weaker when both are compared unupgraded (+0)
+const rawScore=it=>itemScore(Object.assign({},it,{p:0}));
+const isWorse=it=>{const cur=S.eq[it.k];if(!cur||S.lvl<REQ[it.t])return false;if(it.t>cur.t)return false;if((it.b||[]).length>(cur.b||[]).length)return false;return rawScore(it)<rawScore(cur);};
 function equipFromBag(i){const nw=S.inv[i];if(!nw)return;if(S.lvl<REQ[nw.t]){toast(`Bu eşya için seviye ${REQ[nw.t]} gerekli`,'#ff8a7a');return;}
   const old=S.eq[nw.k];S.eq[nw.k]=nw;if(old)S.inv[i]=old;else S.inv.splice(i,1);closePop();afterEq();tone(660,.1);sparks(pl.pos,0xffd77a,8,1.4);}
 function closePop(){invSel=null;$('itPop').classList.remove('on');}
@@ -670,7 +672,7 @@ function renderInv(){
   const n=S.inv.filter(isWorse).length;$('sellWorse').textContent=`🗑️ Kötüleri sat (${n})`;$('sellWorse').disabled=!n;}
 function showPop(){const it=invSel.from==='inv'?S.inv[invSel.i]:S.eq[invSel.k];if(!it){closePop();return;}
   const cur=invSel.from==='inv'?S.eq[it.k]:null,low=S.lvl<REQ[it.t];
-  let cmp='';if(cur){const a=itemScore(it),b=itemScore(cur);cmp=`<div style="font-size:12px;margin-top:6px;opacity:.85">Giydiğin: <span style="color:${TIERC[cur.t]}">${itName(cur)}</span> ${a>b?'<b style="color:#7fe07f">▲ bu daha iyi</b>':a<b?'<b style="color:#ff8a7a">▼ bu daha kötü</b>':''}</div>`;}
+  let cmp='';if(cur){const a=itemScore(it),b=itemScore(cur),w=isWorse(it),pot=!w&&a<b;cmp=`<div style="font-size:12px;margin-top:6px;opacity:.85">Giydiğin: <span style="color:${TIERC[cur.t]}">${itName(cur)}</span> ${a>b?'<b style="color:#7fe07f">▲ bu daha iyi</b>':w?'<b style="color:#ff8a7a">▼ bu daha kötü</b>':pot?'<b style="color:#ffd77a">★ basarsan daha iyi olabilir</b>':''}</div>`;}
   $('itDet').innerHTML=`<button class="x" id="popX">✕</button>
     <div style="font-size:34px">${KINDS[it.k].e}</div>
     <div style="color:${TIERC[it.t]};font-weight:900;font-size:17px">${itName(it)}</div>
