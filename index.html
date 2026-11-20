@@ -472,12 +472,12 @@ function setSword(w){if(!w){if(sword)sword.visible=false;return;}
   if(swordT!==(S.cls||0)*10+w.t){if(sword)P.armR.remove(sword);sword=buildWeapon(w.t);P.armR.add(sword);swordT=(S.cls||0)*10+w.t;}
   sword.visible=true;const p=w.p;
   glowLvl=p>=9?3:p>=7?2:p>=5?1:0;glowCol=p>=9?0xffa030:p>=7?0x4aa8ff:0xffffff;
-  for(const b of sword.userData.blades){b.material.emissive.setHex(glowLvl===3?0x8a4000:glowLvl===2?0x1a4a9a:glowLvl===1?0x222222:0);}
-  for(const a of sword.userData.aura)a.material.color.setHex(glowCol);
+  const ws=offhand?[sword,offhand]:[sword];for(const w of ws)for(const b of w.userData.blades){b.material.emissive.setHex(glowLvl===3?0x8a4000:glowLvl===2?0x1a4a9a:glowLvl===1?0x222222:0);}
+  for(const w of ws)for(const a of w.userData.aura)a.material.color.setHex(glowCol);
   glowLight.color.setHex(glowCol);}
 const swTmp=new V3();
 function swordFx(dt){if(!sword||!sword.visible||!glowLvl)return;const pulse=.75+.25*Math.sin(time*6);
-  const op=[0,.12,.38,.55][glowLvl]*pulse;for(const a of sword.userData.aura)a.material.opacity=op;
+  const op=[0,.12,.38,.55][glowLvl]*pulse;for(const w of (offhand?[sword,offhand]:[sword]))for(const a of w.userData.aura)a.material.opacity=op;
   glowLight.intensity=[0,.3,1.6,2.4][glowLvl]*pulse;
   if(glowLvl>=2&&Math.random()<(glowLvl===3?.9:.45)){sword.localToWorld(swTmp.set(rand(-.06,.06),rand(-.03,.03),rand(.3,sword.userData.len)));
     const m=new THREE.Mesh(new THREE.BoxGeometry(.05,.05,.05),new THREE.MeshBasicMaterial({color:glowLvl===3?(Math.random()<.5?0xffd060:0xff6a20):0x9fd8ff,transparent:true,blending:ADD,depthWrite:false}));
@@ -962,7 +962,7 @@ const PETS=[null,
  {n:'Tilki',e:'🦊',price:30000,b:{gold:25},d:'Altın +%25'},
  {n:'Baykuş',e:'🦉',price:60000,b:{exp:20},d:'EXP +%20',fly:true},
  {n:'Yavru Ejder',e:'🐉',price:200000,b:{atk:10,hp:10},d:'Saldırı +%10 · Can +%10 · ateş püskürür',fly:true,fire:true}];
-let petM=null,petT=0;
+let petM=null,petT=0;const petBalls=[];
 function buildPet(id){const g=new THREE.Group(),P0=PETS[id];let wings=[],tail=null;
   if(id===1||id===2){const c=id===1?0x9a9ea8:0xe07a30,d=id===1?0x5d6069:0xf4f0e6;
     g.add(box(.3,.28,.55,c,0,.38,0));g.add(box(.26,.24,.26,c,0,.52,.32));g.add(box(.12,.1,.16,id===1?d:0x2a2a2a,0,.47,.5));
@@ -984,10 +984,13 @@ function petUpdate(dt){if(!petM)return;const g=petM.g,p=g.position,f=pl.face,tx=
   const k=Math.min(1,dt*(d>3?5:2.5));p.x+=dx*k;p.z+=dz*k;if(d>.15)g.rotation.y=Math.atan2(dx,dz);
   p.y=petM.fly?(petM.id===3?2.6:1.6)+Math.sin(time*3)*.15:(d>.3?Math.abs(Math.sin(time*14))*.08:0);
   petM.wings.forEach((w,i)=>w.rotation.z=(i?-1:1)*Math.sin(time*(petM.id===3?16:9))*.6);if(petM.tail)petM.tail.rotation.y=Math.sin(time*(d>.3?10:3))*.4;
-  if(petM.fire){petT-=dt;if(petT<=0&&!pl.dead){const e=nearestEnemy(7);if(e&&pl.atkT>0){petT=4;const ep=posOf(e);
-    for(let i=0;i<14;i++)setTimeout(()=>{const t=i/14;const m=new THREE.Mesh(new THREE.BoxGeometry(.14,.14,.14),new THREE.MeshBasicMaterial({color:Math.random()<.5?0xff6020:0xffd040,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));
-      m.position.set(p.x+(ep.x-p.x)*t,p.y+(1-p.y)*t,p.z+(ep.z-p.z)*t);scene.add(m);fx.push({m,t:0,life:.4,v:new V3(rand(-.5,.5),rand(.2,1),rand(-.5,.5)),up:true});},i*18);
-    setTimeout(()=>{if(e.p?!e.dead:e.boss?!e.dead:stones.includes(e))damage(e,.8);},250);tone(180,.3,'sawtooth',.05,90);}}}}
+  if(petM.fire){petT-=dt;if(petT<=0&&!pl.dead){const e=nearestEnemy(8);if(e&&(pl.atkT>0||e.state==='chase'||e.boss&&e.state==='fight')){petT=2.2;
+    const ep=posOf(e);g.rotation.y=Math.atan2(ep.x-p.x,ep.z-p.z);const fb=new THREE.Mesh(new THREE.SphereGeometry(.28,10,8),new THREE.MeshBasicMaterial({color:0xff7020,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));
+    fb.add(new THREE.Mesh(new THREE.SphereGeometry(.16,8,6),new THREE.MeshBasicMaterial({color:0xffe060})));fb.position.copy(p);scene.add(fb);petBalls.push({m:fb,e});tone(180,.35,'sawtooth',.07,90);noise(.25,.1,600);}}}
+  for(let i=petBalls.length-1;i>=0;i--){const b=petBalls[i],e=b.e,alive=e.p?!e.dead:e.boss?!e.dead:stones.includes(e);if(!alive){scene.remove(b.m);petBalls.splice(i,1);continue;}
+    const q=posOf(e),ty=e.boss?3:e.p?.8:1.8,dx=q.x-b.m.position.x,dy=ty-b.m.position.y,dz=q.z-b.m.position.z,d=Math.hypot(dx,dy,dz),st=16*dt;
+    if(d<=st+.3){scene.remove(b.m);petBalls.splice(i,1);sparks({x:q.x,z:q.z},0xff6020,14,ty);sparks({x:q.x,z:q.z},0xffd040,8,ty);ring({x:q.x,z:q.z},0xff7020,2.5,.35);damage(e,1.2);floatTxt(q,'🔥','#ff9040',16);}
+    else{b.m.position.x+=dx/d*st;b.m.position.y+=dy/d*st;b.m.position.z+=dz/d*st;b.m.scale.setScalar(1+Math.sin(time*30)*.15);if(Math.random()<.7)sparks({x:b.m.position.x,z:b.m.position.z},Math.random()<.5?0xff6020:0xffd040,1,b.m.position.y);}}}
 function renderPets(){$('ptList').innerHTML=[1,2,3,4].map(id=>{const Pd=PETS[id],own=(S.pets||0)&(1<<id),act=S.pet===id;
   return `<div class="skr"><div class="ski" style="border-color:#c9a35c">${Pd.e}</div><div class="skt"><b>${Pd.n}</b><br><small>${Pd.d}</small></div>
   <div>${act?`<button class="btn g" data-pet="0">Gönder</button>`:own?`<button class="btn" data-pet="${id}">Çağır</button>`:`<button class="btn" data-pbuy="${id}" ${S.gold<Pd.price?'disabled':''}>${Pd.price.toLocaleString('tr-TR')} 🪙</button>`}</div></div>`;}).join('');
@@ -1003,7 +1006,7 @@ const DRECTS=[{x0:392,x1:408,z0:-8,z1:8,room:1},{x0:398,x1:402,z0:-22,z1:-8,gate
 const dState={open:0,pools:[],portalOut:null};
 const inRect=(r,x,z,m=0)=>x>=r.x0-m&&x<=r.x1+m&&z>=r.z0-m&&z<=r.z1+m;
 const walk=()=>DRECTS.filter(r=>!r.gate||r.gate<=dState.open);
-function dungeonClamp(pos){const W=walk();for(const r of W)if(inRect(r,pos.x,pos.z,-.4))return;let best=null,bd=1e9;
+function dungeonClamp(pos){const W=walk();for(const r of W){if(r.gate?(pos.x>=r.x0&&pos.x<=r.x1&&pos.z>=r.z0-.7&&pos.z<=r.z1+.7):inRect(r,pos.x,pos.z,-.4))return;}let best=null,bd=1e9;
   for(const r of W){const x=clamp(pos.x,r.x0+.4,r.x1-.4),z=clamp(pos.z,r.z0+.4,r.z1-.4),d=(x-pos.x)**2+(z-pos.z)**2;if(d<bd){bd=d;best=[x,z];}}pos.x=best[0];pos.z=best[1];}
 (function buildDungeon(){const floorM=new THREE.MeshLambertMaterial({color:0x2a2630}),rockM=M(0x23202a);
   for(const r of DRECTS){const f=new THREE.Mesh(new THREE.PlaneGeometry(r.x1-r.x0,r.z1-r.z0),floorM);f.rotation.x=-Math.PI/2;f.position.set((r.x0+r.x1)/2,.02,(r.z0+r.z1)/2);f.receiveShadow=true;scene.add(f);}
@@ -1117,12 +1120,12 @@ function buildDagger(t,noAura){const g=new THREE.Group();g.position.set(0,-.78,0
     const tp=mesh(new THREE.ConeGeometry(t===4?.07:.05,.14,4),metalM(C0),0,0,.74+t*.04);tp.rotation.x=Math.PI/2;tp.scale.set(1,1,.35);g.add(tp);bl.push(tp);
     if(t===4)for(let i=0;i<3;i++)for(const s of[-1,1]){const sp=mesh(new THREE.ConeGeometry(.025,.08,4),metalM(0xffc080),s*.07,0,.3+i*.14);sp.rotation.z=-s*Math.PI/2;g.add(sp);bl.push(sp);}}
   return noAura?g:auraFor(g,bl,.8);}
-function buildStaff(t){const g=new THREE.Group();g.position.set(0,-.78,.05);const bl=[],wood=[0x8a6a4a,0x6a6a72,0xd8d0c0,0x4a3a6a,0x5a1a10][t],orb=[0xc0a070,0x9ad0ff,0x6af0ff,0xc88cff,0xff8a3a][t];
-  const sh=mesh(new THREE.CylinderGeometry(.045,.055,2.3,6),M(wood),0,.55,0);g.add(sh);
-  const o=new THREE.Mesh(t?new THREE.OctahedronGeometry(.17,0):new THREE.SphereGeometry(.13,8,6),M(orb,{emissive:t?orb:0,emissiveIntensity:.35,shininess:100}));o.position.y=1.82;g.add(o);bl.push(o);
-  if(t>=2){const r=new THREE.Mesh(new THREE.TorusGeometry(.24,.025,6,16,t===3?Math.PI*1.4:Math.PI*2),metalM(t===3?0xd8c8ff:0xc9a35c));r.position.y=1.82;r.rotation.y=Math.PI/2;g.add(r);}
-  if(t===4)for(const s of[-1,1]){const h=mesh(new THREE.ConeGeometry(.05,.4,4),M(0xffb040),s*.18,1.7,0);h.rotation.z=-s*.6;g.add(h);}
-  if(t>=1)g.add(box(.12,.08,.12,0xc9a35c,0,1.6,0));
+function buildStaff(t){const g=new THREE.Group();g.position.set(0,-.74,.06);g.rotation.x=.6;const bl=[],wood=[0x8a6a4a,0x6a6a72,0xd8d0c0,0x4a3a6a,0x5a1a10][t],orb=[0xc0a070,0x9ad0ff,0x6af0ff,0xc88cff,0xff8a3a][t];
+  const sh=mesh(new THREE.CylinderGeometry(.045,.055,2.3,6),M(wood),0,.25,.2);g.add(sh);g.add(box(.14,.16,.14,0xf0c8a0,0,0,.12));
+  const o=new THREE.Mesh(t?new THREE.OctahedronGeometry(.17,0):new THREE.SphereGeometry(.13,8,6),M(orb,{emissive:t?orb:0,emissiveIntensity:.35,shininess:100}));o.position.set(0,1.52,.2);g.add(o);bl.push(o);
+  if(t>=2){const r=new THREE.Mesh(new THREE.TorusGeometry(.24,.025,6,16,t===3?Math.PI*1.4:Math.PI*2),metalM(t===3?0xd8c8ff:0xc9a35c));r.position.set(0,1.52,.2);r.rotation.y=Math.PI/2;g.add(r);}
+  if(t===4)for(const s of[-1,1]){const h=mesh(new THREE.ConeGeometry(.05,.4,4),M(0xffb040),s*.18,1.4,.2);h.rotation.z=-s*.6;g.add(h);}
+  if(t>=1)g.add(box(.12,.08,.12,0xc9a35c,0,1.3,.2));
   return auraFor(g,bl,2.2);}
 function buildGreat(t){const g=new THREE.Group();g.position.set(0,-.78,0);g.rotation.x=-.45;const bl=[],C0=[0x5a4a4a,0x6a6a72,0x34343e,0x4a2a4a,0x2a0a0a][t],E0=[0x6a4a3a,0x9aa0aa,0xff2040,0xc070ff,0xff8a2a][t];
   g.add(box(.13,.13,.5,0x1a0a0a,0,0,-.02));g.add(box(.7,.1,.14,t>=2?0x2a0a0a:0x5a5a5a,0,0,.25));
@@ -1133,7 +1136,7 @@ function buildGreat(t){const g=new THREE.Group();g.position.set(0,-.78,0);g.rota
   if(t===4)for(let i=0;i<4;i++)for(const s of[-1,1]){const sp=mesh(new THREE.ConeGeometry(.04,.16,4),metalM(0x2a0a0a),s*.16,0,.6+i*.35);sp.rotation.z=-s*Math.PI/2;g.add(sp);}
   return auraFor(g,bl,2.3);}
 function buildWeapon(t){const c=S.cls||0;if(offhand){P.armL.remove(offhand);offhand=null;}
-  if(c===1){offhand=buildDagger(t,true);P.armL.add(offhand);return buildDagger(t);}
+  if(c===1){offhand=buildDagger(t);P.armL.add(offhand);return buildDagger(t);}
   if(c===2)return buildStaff(t);if(c===3)return buildGreat(t);return buildSword(t);}
 // class look accessories
 function applyClassLook(){if(!classRoot)return;const c=S.cls||0,hasHelm=!!S.eq.helm,key=c+':'+hasHelm;if(key===classKey)return;classKey=key;clearG(classRoot);
@@ -1191,6 +1194,14 @@ function classSkill(k,f,col,l){const c=S.cls;const inR=(m,r)=>{const p=posOf(m);
     else if(k==='roar'){pl.buffT=12+(f-1)*3;pl.buffAtk=Math.round(25*Math.sqrt(f));pl.buffSpd=10;pl.buffLeech=10;ring(pl.pos,0xff2040,7,.7);sparks(pl.pos,0xff2040,24,1.8);
       tone(180,.5,'sawtooth',.1,700);setTimeout(()=>tone(700,.6,'sawtooth',.06,350),250);toast(`🌕 Kurt Ruhu! Saldırı +%${pl.buffAtk}, can çalma +%10`,'#ff6a7a');hud();}
     else{const r=6;ring(pl.pos,0x8a2aff,r*1.2,.6);for(const m of targets()){if(m.dead||!inR(m,r))continue;const p=posOf(m);damage(m,1.5*f);m.curse=time+8;m.slowUntil=time+8;floatTxt(p,'💀','#c88cff',18);sparks(p,0x8a2aff,8,1.5);}tone(120,.6,'sawtooth',.1,60);}}}
+function classPose(moving){const c=S.cls||0;rider.rotation.x=0;P.legL.rotation.z=P.legR.rotation.z=0;P.armL.rotation.z=P.armR.rotation.z=0;if(riding)return;
+  if(c===1){ // ninja: crouched, leaning forward, daggers ready / arms back when running
+    if(moving){rider.rotation.x=.38;if(pl.atkAnim<=0){P.armR.rotation.x=.9;P.armL.rotation.x=.9;}}
+    else{rider.rotation.x=.18;const br=Math.sin(time*2.5)*.04;P.legL.rotation.x=-.35;P.legR.rotation.x=.25;P.legL.rotation.z=.18;P.legR.rotation.z=-.18;
+      if(pl.atkAnim<=0){P.armR.rotation.x=-1.0+br;P.armR.rotation.z=.35;}P.armL.rotation.x=-.75-br;P.armL.rotation.z=-.4;}
+    if(pl.atkAnim>0)P.armL.rotation.x=-2.6+(1-((pl.atkAnim+.15)%.3)/.3)*2.4;}
+  else if(c===2){if(!moving&&pl.atkAnim<=0){P.armR.rotation.x=-.6;}}
+  else if(c===3){if(!moving&&pl.atkAnim<=0){P.armR.rotation.x=-.5;P.armR.rotation.z=.15;P.armL.rotation.x=-.5;P.armL.rotation.z=-.35;}}}
 function classTick(dt){
   if(pl.stealthT>0){pl.stealthT-=dt;if(pl.stealthT<=0){setGhost(false);pl.ambush=false;}}
   if(pl.regenT>0){pl.regenT-=dt;pl.hp=Math.min(maxHp(),pl.hp+maxHp()*.03*dt);if(Math.random()<.2)sparks(pl.pos,0x60ff80,1,rand(.5,2));}
@@ -1543,7 +1554,7 @@ $('bPot').querySelector('.cd').style.transform=`scaleY(${pl.potT})`;
   P.g.position.copy(pl.pos);
   let fr=P.g.rotation.y,diff=((pl.face-fr+Math.PI*3)%(Math.PI*2))-Math.PI;P.g.rotation.y=pl.spin>0?fr+dt*30:fr+diff*Math.min(1,dt*14);
   if(pl.spin>0)pl.spin-=dt;
-  animHuman(P,pl.walk,moving,pl.atkAnim);if(pl.spin>0)P.armR.rotation.x=-1.5;rideAnim(moving,dt);petUpdate(dt);armorFx(moving);
+  animHuman(P,pl.walk,moving,pl.atkAnim);classPose(moving);if(pl.spin>0)P.armR.rotation.x=-1.5;rideAnim(moving,dt);petUpdate(dt);armorFx(moving);
   // mobs
   for(const m of mobs){if(m.dead)continue;const g=m.p.g,pos=g.position;m.anim+=dt;
     const dP=pos.distanceTo(pl.pos);let mv=0;
