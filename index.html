@@ -138,6 +138,7 @@ label.chk{display:flex;gap:8px;align-items:center;justify-content:center;font-si
   <div class="slots" id="smSlots"></div>
   <div id="swordV" style="font-size:24px"></div>
   <p id="upInfo"></p>
+  <label class="chk"><input type="checkbox" id="useBook"> <span id="bookTxt">📖 Demirci Kitabı kullan</span></label>
   <label class="chk"><input type="checkbox" id="useScroll"> <span id="scrollTxt">Kutsama Kağıdı kullan</span></label>
   <div id="upRes"></div>
   <button class="btn" id="upBtn">Yükselt</button><button class="btn g" data-close>Kapat</button>
@@ -182,6 +183,7 @@ label.chk{display:flex;gap:8px;align-items:center;justify-content:center;font-si
   <p>“Taşların oralara iksirsiz gidilmez!”</p>
   <div class="row"><span>🧪 Kırmızı İksir<br><small>Canın %40'ını doldurur · 40 altın</small></span><span><button class="btn" data-buy="pot1">x1</button><button class="btn" data-buy="pot10">x10</button></span></div>
   <div class="row"><span>📜 Kutsama Kağıdı<br><small>Yükseltme başarısız olursa kılıç kırılmaz · 900 altın</small></span><button class="btn" data-buy="scroll">Al</button></div>
+  <div class="row"><span>📖 Demirci Kitabı<br><small>Basma şansını %25 artırır · 2.500 altın</small></span><span><button class="btn" data-buy="book1">x1</button><button class="btn" data-buy="book10">x10</button></span></div>
   <p id="shopInfo"></p>
   <button class="btn g" data-close>Kapat</button>
 </div></div>
@@ -430,8 +432,8 @@ function cleanItem(o){if(!o||typeof o!=='object'||!KINDS[o.k])return null;const 
 
 
 // stats
-const S={lvl:1,exp:0,gold:120,plus:0,pots:5,scrolls:1,ts:0,inv:[],eq:null,rer:0,addb:0,auto:0};
-const KEYS=['lvl','exp','gold','plus','pots','scrolls','ts','gift','rer','addb','auto'];
+const S={lvl:1,exp:0,gold:120,plus:0,pots:5,scrolls:1,ts:0,inv:[],eq:null,rer:0,addb:0,auto:0,book:0};
+const KEYS=['lvl','exp','gold','plus','pots','scrolls','ts','gift','rer','addb','auto','book'];
 const pick=o=>{const r={};for(const k of KEYS)if(typeof o[k]==='number'&&isFinite(o[k]))r[k]=o[k];
   if(Array.isArray(o.inv))r.inv=o.inv.map(cleanItem).filter(Boolean).slice(0,INV);
   if(o.eq&&typeof o.eq==='object'){r.eq={};for(const k of SLOTS){const c=cleanItem(o.eq[k]);if(c&&c.k===k)r.eq[k]=c;}}return r;};
@@ -555,6 +557,7 @@ function breakStone(s){scene.remove(s.g);s.label.remove();stones.splice(stones.i
   toast(`Kadim Taş kırıldı! +${g} altın`,'#ffb0c0');
   if(Math.random()<.35){S.scrolls++;toast('📜 Kutsama Kağıdı düştü!','#bfe3ff');}
   if(Math.random()<.3){S.rer++;toast('🔮 Efsun Değiştirme Kağıdı düştü!','#c88cff');}
+  if(Math.random()<.2){S.book++;toast('📖 Demirci Kitabı düştü!','#9fdcff');}
   if(Math.random()<.1){S.addb++;toast('➕ Efsun Ekleme Kağıdı düştü!','#c88cff');}
   if(Math.random()<.5){const n=Math.floor(rand(1,4));S.pots+=n;toast(`🧪 ${n} Kırmızı İksir düştü!`);}
   dropItem(s.lvl,s.pos);if(Math.random()<.4)setTimeout(()=>dropItem(s.lvl,s.pos),400);
@@ -683,6 +686,7 @@ function slotHTML(it,k,sel){const K=KINDS[k];return `<div class="slot${sel?' sel
 function refreshSmith(){
   $('smSlots').innerHTML=SLOTS.map(k=>slotHTML(S.eq[k],k,k===smSel)).join('');
   $('smSlots').querySelectorAll('.slot').forEach(el=>el.onclick=()=>{smSel=el.dataset.slot;$('upRes').textContent='';refreshSmith();});
+  $('bookTxt').textContent=`📖 Demirci Kitabı kullan: +%25 şans (${S.book} adet)`;$('useBook').disabled=S.book<=0;if(S.book<=0)$('useBook').checked=false;
   $('scrollTxt').textContent=`Kutsama Kağıdı kullan (${S.scrolls} adet)`;$('useScroll').disabled=S.scrolls<=0;if(S.scrolls<=0)$('useScroll').checked=false;
   const it=S.eq[smSel];
   if(!it){$('swordV').textContent='—';$('upInfo').innerHTML=`Bu yuvada eşyan yok. Kadim Taşlardan ${KINDS[smSel].n.toLowerCase()} düşür ve envanterden giy.`;$('upBtn').disabled=true;return;}
@@ -690,12 +694,15 @@ function refreshSmith(){
   const p=it.p;
   if(p>=9){$('upInfo').innerHTML=`${statTxt(itemStats(it))}<br>Bu eşya efsane oldu. Daha ileri gidilemez!`;$('upBtn').disabled=true;return;}
   const nx=itemStats(Object.assign({},it,{p:p+1})),cost=Math.round(UPC[p]*(1+it.t*.6));
-  $('upInfo').innerHTML=`Şimdi: ${statTxt(itemStats(it))}<br><span style="color:#c9f27a">Sonra: ${statTxt(nx)}</span><br>Başarı şansı: <b>%${UPP[p]}</b> · Ücret: <b>${cost} altın</b>`+(p>0?`<br><small style="color:#ff9a8a">Başarısız olursa eşya kırılır ve +0'a döner!</small>`:'');
+  $('upInfo').innerHTML=`Şimdi: ${statTxt(itemStats(it))}<br><span style="color:#c9f27a">Sonra: ${statTxt(nx)}</span><br>Başarı şansı: <b>%${upChance(p)}</b>${$('useBook').checked?' <small style="color:#9fdcff">(kitapla)</small>':''} · Ücret: <b>${cost} altın</b>`+(p>0?`<br><small style="color:#ff9a8a">Başarısız olursa eşya kırılır ve +0'a döner!</small>`:'');
   $('upBtn').disabled=S.gold<cost;}
+const upChance=p=>Math.min(100,UPP[p]+($('useBook').checked&&S.book>0?25:0));
+$('useBook').onchange=()=>refreshSmith();
 $('upBtn').onclick=()=>{const it=S.eq[smSel];if(!it)return;const p=it.p,cost=Math.round(UPC[p]*(1+it.t*.6));if(p>=9||S.gold<cost)return;
   S.gold-=cost;$('upBtn').disabled=true;const res=$('upRes');res.style.color='#fff';res.textContent='🔨 Dövülüyor...';
   let k=0;const iv=setInterval(()=>{tone(900+k*80,.06,'square',.05);k++;},180);
-  setTimeout(()=>{clearInterval(iv);const ok=Math.random()*100<UPP[p];
+  const ch=upChance(p);if($('useBook').checked&&S.book>0)S.book--;
+  setTimeout(()=>{clearInterval(iv);const ok=Math.random()*100<ch;
     if(ok){it.p++;res.style.color='#c9f27a';res.textContent=`✨ BAŞARILI! ${itName(it)}`;tone(784,.15);setTimeout(()=>tone(1046,.35),120);sparks(pl.pos,0xffd77a,14,1.6);}
     else if($('useScroll').checked&&S.scrolls>0){S.scrolls--;it.p=Math.max(0,p-1);res.style.color='#bfe3ff';res.textContent=`📜 Başarısız! Kağıt eşyayı korudu: +${it.p}`;tone(300,.3,'triangle',.08,200);}
     else{it.p=0;res.style.color='#ff6a5a';res.textContent='💔 Kırıldı! Demirci yeniden dövdü: +0';tone(200,.5,'sawtooth',.1,60);}
@@ -773,15 +780,15 @@ document.querySelectorAll('[data-ebuy]').forEach(b=>b.onclick=()=>{const k=b.dat
   S.gold-=cost;if(k==='rer1')S.rer++;else if(k==='rer10')S.rer+=10;else S.addb++;tone(880,.1);hud();save();renderEnch();});
 
 document.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const k=b.dataset.buy;
-  const cost=k==='pot1'?40:k==='pot10'?400:900;if(S.gold<cost){$('shopInfo').textContent='Yeterli altının yok!';tone(160,.2,'square',.05);return;}
-  S.gold-=cost;if(k==='pot1')S.pots++;else if(k==='pot10')S.pots+=10;else S.scrolls++;tone(880,.1);hud();save();
+  const cost={pot1:40,pot10:400,scroll:900,book1:2500,book10:25000}[k];if(S.gold<cost){$('shopInfo').textContent='Yeterli altının yok!';tone(160,.2,'square',.05);return;}
+  S.gold-=cost;if(k==='pot1')S.pots++;else if(k==='pot10')S.pots+=10;else if(k==='book1')S.book++;else if(k==='book10')S.book+=10;else S.scrolls++;tone(880,.1);hud();save();
   $('shopInfo').textContent=`Altının: ${S.gold} · İksir: ${S.pots} · Kağıt: ${S.scrolls}`;});
 const toCode=()=>'KT1-'+btoa(JSON.stringify(pick(S)));
 $('codeBtn').onclick=()=>{$('codeTxt').value=toCode();$('codeMsg').textContent='';$('codeIn').value='';$('codeP').classList.add('on');};
 $('copyBtn').onclick=()=>{const t=$('codeTxt');t.select();(navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject()).then(()=>{$('codeMsg').style.color='#c9f27a';$('codeMsg').textContent='Kopyalandı ✔';},()=>{$('codeMsg').style.color='#ffe7b0';$('codeMsg').textContent='Kutudaki kodu basılı tutup kopyala.';});};
 $('loadBtn').onclick=()=>{const g=$('codeIn').value.trim().toUpperCase();
   if(g==='SINIRSIZ'||g==='SEVIYE'){const m=$('codeMsg');m.style.color='#ffd77a';
-    if(g==='SINIRSIZ'){S.gold+=1000000;S.scrolls+=30;S.rer+=20;S.addb+=10;S.pots+=50;m.textContent='💰 +1.000.000 altın, 30 Kutsama, 20 Değiştirme, 10 Ekleme Kağıdı, 50 İksir!';}
+    if(g==='SINIRSIZ'){S.gold+=1000000;S.scrolls+=30;S.rer+=20;S.addb+=10;S.pots+=50;S.book+=30;m.textContent='💰 +1.000.000 altın, 30 Demirci Kitabı, 30 Kutsama, 20 Değiştirme, 10 Ekleme Kağıdı, 50 İksir!';}
     else{S.lvl=Math.min(60,S.lvl+5);S.exp=0;pl.hp=maxHp();m.textContent=`⬆️ +5 seviye! Artık seviye ${S.lvl}`;}
     save();cloudPush();hud();tone(784,.15);setTimeout(()=>tone(1046,.15),120);setTimeout(()=>tone(1318,.4),240);return;}
   if(g==='USTA9'){const m=$('codeMsg');if(S.gift){m.style.color='#ff8a7a';m.textContent='Bu hediye zaten kullanıldı 😉';return;}
