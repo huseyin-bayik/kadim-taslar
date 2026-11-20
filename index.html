@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Kadim Taşlar</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f150a">
@@ -15,11 +15,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden;background:#000;font-family:Inter,system-ui,sans-serif;color:#fff;user-select:none;-webkit-user-select:none;touch-action:none}
+html,body{height:100%;width:100%;position:fixed;inset:0;overscroll-behavior:none;overflow:hidden;background:#000;font-family:Inter,system-ui,sans-serif;color:#fff;user-select:none;-webkit-user-select:none;touch-action:none}
 canvas{display:block}
 body>canvas:first-child{position:fixed;inset:0}
 .ui{position:fixed;z-index:5}
-#top{top:calc(8px + env(safe-area-inset-top));left:10px;right:10px;display:flex;gap:10px;align-items:flex-start;pointer-events:none}
+#top{top:calc(8px + env(safe-area-inset-top));left:calc(10px + env(safe-area-inset-left));right:10px;display:flex;gap:10px;align-items:flex-start;pointer-events:none}
 .card{background:rgba(20,14,8,.72);border:1px solid #8a6a3a;border-radius:10px;padding:6px 9px;box-shadow:0 2px 10px #0006}
 #lvl{font:900 18px Cinzel,serif;color:#ffd77a;min-width:46px;text-align:center}
 .bars{flex:1;max-width:300px}
@@ -67,7 +67,7 @@ label.chk{display:flex;gap:8px;align-items:center;justify-content:center;font-si
 #title h1{font:900 clamp(40px,11vw,74px) Cinzel,serif;color:#ffd77a;text-shadow:0 0 22px #c98f2a,0 4px 0 #5a3a10;letter-spacing:.06em;line-height:1}
 #title .s{color:#d9c49a;margin:12px 0 22px;font-size:15px}
 #title .tip{color:#a99a7a;font-size:12.5px;margin-top:18px;line-height:1.6}
-#mute{top:calc(8px + env(safe-area-inset-top));right:10px;width:36px;height:36px;border-radius:50%;background:rgba(20,14,8,.72);border:1px solid #8a6a3a;color:#fff;font-size:15px}
+#mute{top:calc(8px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));width:36px;height:36px;border-radius:50%;background:rgba(20,14,8,.72);border:1px solid #8a6a3a;color:#fff;font-size:15px}
 #top{right:56px}
 @media (max-aspect-ratio:1/1){#toast{top:calc(172px + env(safe-area-inset-top))}}
 .slots{display:flex;gap:6px;justify-content:center;margin:8px 0}
@@ -90,11 +90,11 @@ label.chk{display:flex;gap:8px;align-items:center;justify-content:center;font-si
 .slot .lk{bottom:2px;right:2px;font-size:10px}
 .slot .eqm{top:2px;left:3px;color:#ffd77a;font-size:10px;font-weight:900}
 #statLine{font-size:12.5px;color:#f0dfbf}
-#side{top:calc(62px + env(safe-area-inset-top));left:10px;display:flex;flex-direction:column;gap:8px}
+#side{top:calc(62px + env(safe-area-inset-top));left:calc(10px + env(safe-area-inset-left));display:flex;flex-direction:column;gap:8px}
 .sb{width:46px;height:46px;border-radius:12px;background:rgba(20,14,8,.78);border:1.5px solid #c9a35c;font-size:22px;color:#fff;position:relative}
 .sb.on{background:#c9a35c}
 .sb.new::after{content:'';position:absolute;top:-3px;right:-3px;width:12px;height:12px;border-radius:50%;background:#ff4a4a;border:2px solid #fff}
-#mini{top:calc(52px + env(safe-area-inset-top));right:10px;width:112px;height:112px;border-radius:50%;border:2px solid #c9a35c;box-shadow:0 2px 10px #000a;background:#2b3d1e}
+#mini{top:calc(52px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));width:112px;height:112px;border-radius:50%;border:2px solid #c9a35c;box-shadow:0 2px 10px #000a;background:#2b3d1e}
 #camz{right:0;top:0;width:52%;height:100%}
 #bigMap{position:static;width:min(86vw,86vh,420px);height:min(86vw,86vh,420px);border-radius:14px;border:2px solid #c9a35c;background:#2b3d1e}
 </style>
@@ -218,8 +218,9 @@ document.body.prepend(renderer.domElement);
 const scene=new THREE.Scene();
 const SKY=0xaecbe0;scene.background=new THREE.Color(SKY);scene.fog=new THREE.Fog(SKY,32,80);
 const camera=new THREE.PerspectiveCamera(50,1,.1,200);
-function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}
-addEventListener('resize',resize);resize();
+function resize(){const w=document.documentElement.clientWidth||innerWidth,h=innerHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
+addEventListener('resize',resize);addEventListener('orientationchange',()=>{setTimeout(resize,250);setTimeout(resize,700);});
+if(window.visualViewport)visualViewport.addEventListener('resize',resize);resize();
 
 scene.add(new THREE.HemisphereLight(0xdcecff,0x55663a,.85));
 const sun=new THREE.DirectionalLight(0xfff0d0,.85);sun.castShadow=true;
@@ -248,7 +249,7 @@ const colliders=[];
 // trees (instanced)
 const TREES=[];let LEAF=null;
 (function trees(){
-  const N=140,trunk=new THREE.InstancedMesh(new THREE.CylinderGeometry(.18,.26,1.4,5),M(0x6b4a2b),N);
+  const N=90,trunk=new THREE.InstancedMesh(new THREE.CylinderGeometry(.18,.26,1.4,5),M(0x6b4a2b),N);
   const leaf=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),M(0xffffff),N*2);
   trunk.castShadow=leaf.castShadow=true;
   const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),col=new THREE.Color();let li=0;
@@ -273,6 +274,57 @@ house(-9,-7,.6,0xe8d9b5,0x9c3b2a);house(9,-8,-.5,0xdcc9a0,0x7a4a2a);house(-10,7,
 (function well(){const g=new THREE.Group();g.add(mesh(new THREE.CylinderGeometry(1.1,1.2,.9,10),M(0x9a9a92),0,.45,0));
   g.add(mesh(new THREE.CylinderGeometry(.95,.95,.1,10),M(0x3a6ea8),0,.8,0));g.add(box(.15,1.8,.15,0x6b4a2b,-.9,1.4,0));g.add(box(.15,1.8,.15,0x6b4a2b,.9,1.4,0));
   const rf=mesh(new THREE.ConeGeometry(1.5,.8,4),M(0x8a3f2c),0,2.6,0);rf.rotation.y=Math.PI/4;g.add(rf);scene.add(g);colliders.push({x:0,z:0,r:1.4});})();
+// ---- village decorations
+const chickens=[],villageAnim=[];
+(function decor(){
+  // fence ring with 4 gates
+  const postG=new THREE.BoxGeometry(.18,1.1,.18),railG=new THREE.BoxGeometry(.08,.1,1),wood=M(0x7a5634),R0=VILLAGE-.6,n=64;
+  for(let i=0;i<n;i++){const a=i/n*Math.PI*2;let gate=false;for(const ga of [0,Math.PI/2,Math.PI,Math.PI*1.5]){let d=Math.abs(((a-ga+Math.PI*3)%(Math.PI*2))-Math.PI);if(d<.2)gate=true;}if(gate)continue;
+    const x=Math.cos(a)*R0,z=Math.sin(a)*R0;const p=mesh(postG,wood,x,.55,z);scene.add(p);colliders.push({x,z,r:.35});
+    const a2=a+Math.PI/n,len=2*Math.PI*R0/n;for(const y of [.45,.85]){const r=mesh(railG,wood,Math.cos(a2)*R0,y,Math.sin(a2)*R0);r.scale.z=len;r.rotation.y=-a2;scene.add(r);}}
+  // gate lanterns
+  for(const ga of [0,Math.PI/2,Math.PI,Math.PI*1.5])for(const s of[-1,1]){const a=ga+s*.24,x=Math.cos(a)*R0,z=Math.sin(a)*R0;
+    scene.add(mesh(new THREE.BoxGeometry(.2,2.2,.2),M(0x4a3420),x,1.1,z));const l=mesh(new THREE.BoxGeometry(.32,.38,.32),new THREE.MeshBasicMaterial({color:0xffd27a}),x,2.35,z,false);scene.add(l);
+    scene.add(mesh(new THREE.ConeGeometry(.28,.22,4),M(0x2a2a2a),x,2.66,z));colliders.push({x,z,r:.3});}
+  // horse cart (west side)
+  const cart=new THREE.Group();cart.position.set(-12,0,-2.2);cart.rotation.y=Math.PI/2;
+  cart.add(box(1.7,.55,2.6,0x8a5a2e,0,.95,0));cart.add(box(1.8,.12,2.7,0x6a4422,0,.68,0));
+  for(const s of[-1,1]){cart.add(box(.1,.55,2.6,0x6a4422,s*.85,1.4,0));const w=mesh(new THREE.CylinderGeometry(.55,.55,.14,12),M(0x5a3a1a),s*1.0,.55,-.4);w.rotation.z=Math.PI/2;cart.add(w);
+    const hub=mesh(new THREE.CylinderGeometry(.14,.14,.18,8),M(0xc9a35c),s*1.02,.55,-.4);hub.rotation.z=Math.PI/2;cart.add(hub);}
+  for(let i=0;i<3;i++){const h=mesh(new THREE.CylinderGeometry(.35,.35,.7,10),M(0xe0c060),-.35+i*.35,1.45,-.6+i*.5);h.rotation.z=Math.PI/2;cart.add(h);}
+  for(const s of[-1,1]){const sh=box(.08,.08,2.2,0x6a4422,s*.45,.85,2.2);cart.add(sh);}
+  // horse
+  const horse=new THREE.Group();horse.position.set(0,0,3.7);const hc=0x7a4a2a,hd=0x3a2414;
+  horse.add(box(.7,.8,1.7,hc,0,1.35,0));const neck=new THREE.Group();neck.position.set(0,1.6,.75);horse.add(neck);
+  const nk=box(.42,1.0,.45,hc,0,.4,.15);nk.rotation.x=.5;neck.add(nk);const head=box(.4,.42,.85,hc,0,.85,.55);neck.add(head);neck.add(box(.12,.5,.6,hd,0,.75,.1));
+  for(const s of[-1,1])neck.add(mesh(new THREE.ConeGeometry(.07,.22,4),M(hc),s*.12,1.15,.35));
+  const legs=[];for(const [x,z] of [[-.22,.65],[.22,.65],[-.22,-.65],[.22,-.65]]){const j=new THREE.Group();j.position.set(x,1.0,z);j.add(box(.18,1.0,.2,hc,0,-.5,0));j.add(box(.2,.15,.22,hd,0,-.95,0));horse.add(j);legs.push(j);}
+  const tail=box(.12,.7,.12,hd,0,1.3,-.95);tail.rotation.x=.35;horse.add(tail);
+  cart.add(horse);scene.add(cart);colliders.push({x:-12,z:-2.2,r:1.5},{x:-8.3,z:-2.2,r:1.1});
+  villageAnim.push(t=>{neck.rotation.x=Math.sin(t*.7)*.12-.05+(Math.sin(t*.23)>.8?.5:0);tail.rotation.z=Math.sin(t*2.3)*.3;legs[0].rotation.x=Math.max(0,Math.sin(t*.5))*.2;});
+  // hay bales, barrels, crates
+  for(const [x,z,r] of [[-12.8,2.6,0],[-12,3.4,1],[-13.4,3.8,.4]]){const h=mesh(new THREE.CylinderGeometry(.6,.6,1,12),M(0xd8b450),x,.6,z);h.rotation.z=Math.PI/2;h.rotation.y=r;scene.add(h);colliders.push({x,z,r:.6});}
+  const barrel=(x,z)=>{const b=mesh(new THREE.CylinderGeometry(.38,.32,.9,10),M(0x8a5a2a),x,.45,z);scene.add(b);for(const y of[.2,.7])scene.add(mesh(new THREE.TorusGeometry(.37,.035,4,12),M(0x3a3a3a),x,y,z).rotateX(Math.PI/2));colliders.push({x,z,r:.4});};
+  const crate=(x,z,s=.8,r=0)=>{const c=box(s,s,s,0xa87a44,x,s/2,z);c.rotation.y=r;scene.add(c);const e=box(s*1.02,.08,s*1.02,0x6a4422,x,s*.5,z);e.rotation.y=r;scene.add(e);colliders.push({x,z,r:s*.6});};
+  barrel(6.8,-5.6);barrel(7.4,-4.6);crate(-7.4,-5.8,.8,.3);crate(-7.6,-4.8,.6,.8);crate(-7.5,-5.8,.5,.1);barrel(-2.6,-12.4);crate(2.8,-12.1,.7,.5);
+  // flower patches
+  const fc=[0xff6a8a,0xffd84a,0xffffff,0xb07aff];for(let i=0;i<40;i++){const a=Math.random()*6.28,d=rand(3,13);const x=Math.cos(a)*d,z=Math.sin(a)*d;if(Math.hypot(x,z)<2.2)continue;
+    scene.add(mesh(new THREE.BoxGeometry(.12,.12,.12),M(fc[i%4]),x,.12,z,false));scene.add(mesh(new THREE.BoxGeometry(.04,.12,.04),M(0x3a7a2a),x,.04,z,false));}
+  // chickens
+  for(let i=0;i<4;i++){const g=new THREE.Group();g.add(box(.32,.28,.42,0xf4f0e6,0,.32,0));g.add(box(.22,.24,.2,0xf4f0e6,0,.52,.2));g.add(box(.06,.1,.12,0xe03030,0,.68,.2));
+    g.add(box(.08,.06,.1,0xf0a020,0,.5,.33));g.add(box(.12,.18,.12,0xf4f0e6,0,.42,-.24));for(const s of[-1,1])g.add(box(.04,.18,.04,0xf0a020,s*.08,.09,0));
+    const a=Math.random()*6.28,d=rand(4,11);g.position.set(Math.cos(a)*d,0,Math.sin(a)*d);scene.add(g);
+    chickens.push({g,tx:g.position.x,tz:g.position.z,wait:rand(0,3),peck:0});}
+})();
+function animVillage(dt){for(const f of villageAnim)f(time);
+  for(const c of chickens){const p=c.g.position;
+    if(c.wait>0){c.wait-=dt;c.peck+=dt;c.g.children[1].position.y=.52-Math.max(0,Math.sin(c.peck*9))*.18;c.g.children[2].position.y=.68-Math.max(0,Math.sin(c.peck*9))*.18;
+      if(c.wait<=0){const a=Math.random()*6.28,d=rand(3,12);c.tx=Math.cos(a)*d;c.tz=Math.sin(a)*d;}}
+    else{const dx=c.tx-p.x,dz=c.tz-p.z,d=Math.hypot(dx,dz);if(d<.2){c.wait=rand(1.5,5);}else{p.x+=dx/d*1.6*dt;p.z+=dz/d*1.6*dt;c.g.rotation.y=Math.atan2(dx,dz);p.y=Math.abs(Math.sin(time*14))*.06;}
+      // scatter from player
+      }
+    const px=p.x-pl.pos.x,pz=p.z-pl.pos.z,pd=Math.hypot(px,pz);if(pd<1.6&&pd>0.01){c.tx=p.x+px/pd*4;c.tz=p.z+pz/pd*4;if(Math.hypot(c.tx,c.tz)>13){c.tx*=.7;c.tz*=.7;}c.wait=0;}}}
+
 
 // ---------------- characters ----------------
 function human(c){const g=new THREE.Group(),p={g};
@@ -797,6 +849,7 @@ function update(dt){
     if(place(s.label,s.pos,4.4))s.label.querySelector('i').style.width=(s.hp/s.max*100)+'%';}
   stoneRespawn=stoneRespawn.map(t=>t-dt);while(stoneRespawn.length&&stoneRespawn[0]<=0){stoneRespawn.shift();spawnStone(stones.filter(s=>Math.hypot(s.x,s.z)<42).length<3);toast('☄️ Gökten yeni bir Kadim Taş düştü!','#ffb0c0');}
   // npcs
+  animVillage(dt);
   nearNpc=null;for(const n of npcs){place(n.label,n.pos,2.6);if(n.pos.distanceTo(pl.pos)<3.2)nearNpc=n;n.p.armR.rotation.x=n.panel==='smith'?-1.2+Math.abs(Math.sin(time*3))*-.9:-.15;}
   $('bInt').style.display=nearNpc&&!pl.dead?'block':'none';if(nearNpc)$('bInt').textContent=nearNpc.name;
   // fx
