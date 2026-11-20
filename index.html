@@ -48,8 +48,8 @@ body>canvas:first-child{position:fixed;inset:0}
 .lbl.npc{color:#9fe0ff}
 .ft{position:absolute;font-weight:900;font-size:18px;text-shadow:0 2px 3px #000;transform:translate(-50%,-50%);animation:up .9s ease-out forwards;pointer-events:none}
 @keyframes up{to{transform:translate(-50%,-160%);opacity:0}}
-#toast{top:calc(64px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
-#toast div{background:rgba(20,14,8,.8);border:1px solid #8a6a3a;padding:6px 12px;border-radius:8px;font-size:13px;font-weight:700;animation:fade 3s forwards}
+#toast{top:calc(60px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;pointer-events:none;max-width:60vw}
+#toast div{background:rgba(20,14,8,.55);padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-shadow:0 1px 2px #000;animation:fade 2.4s forwards}
 @keyframes fade{0%{opacity:0;transform:translateY(-6px)}10%,75%{opacity:1;transform:none}100%{opacity:0}}
 .ov{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);padding:18px}
 .ov.on{display:flex}
@@ -69,7 +69,7 @@ label.chk{display:flex;gap:8px;align-items:center;justify-content:center;font-si
 #title .tip{color:#a99a7a;font-size:12.5px;margin-top:18px;line-height:1.6}
 #mute{top:calc(8px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));width:36px;height:36px;border-radius:50%;background:rgba(20,14,8,.72);border:1px solid #8a6a3a;color:#fff;font-size:15px}
 #top{right:56px}
-@media (max-aspect-ratio:1/1){#toast{top:calc(172px + env(safe-area-inset-top))}}
+@media (max-aspect-ratio:1/1){#toast{top:calc(172px + env(safe-area-inset-top));max-width:70vw}}
 .slots{display:flex;gap:6px;justify-content:center;margin:8px 0}
 .slot{width:56px;height:56px;border-radius:10px;background:#0006;border:2px solid #5a4a30;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:22px;position:relative;cursor:pointer;line-height:1.1}
 .slot small{font-size:9px;color:#d9c49a;margin-top:2px}
@@ -487,7 +487,8 @@ function place(el,pos,h){tmpV.set(pos.x,pos.y+h,pos.z).project(camera);
 function floatTxt(pos,txt,color,size){tmpV.set(pos.x,pos.y+2.2,pos.z).project(camera);if(tmpV.z>1)return;
   const d=document.createElement('div');d.className='ft';d.textContent=txt;d.style.color=color;if(size)d.style.fontSize=size+'px';
   d.style.left=((tmpV.x+1)/2*innerWidth+rand(-14,14))+'px';d.style.top=((1-tmpV.y)/2*innerHeight)+'px';lbls.appendChild(d);setTimeout(()=>d.remove(),950);}
-function toast(msg,color='#ffe7b0'){const d=document.createElement('div');d.textContent=msg;d.style.color=color;$('toast').appendChild(d);setTimeout(()=>d.remove(),3000);}
+function pushToast(d){const t=$('toast');t.appendChild(d);while(t.children.length>3)t.firstChild.remove();setTimeout(()=>d.remove(),2400);}
+function toast(msg,color='#ffe7b0'){const d=document.createElement('div');d.textContent=msg;d.style.color=color;pushToast(d);}
 const fx=[];
 function ring(pos,color,max=4,life=.5){const m=new THREE.Mesh(new THREE.RingGeometry(.6,.9,32),new THREE.MeshBasicMaterial({color,transparent:true,side:THREE.DoubleSide}));
   m.rotation.x=-Math.PI/2;m.position.set(pos.x,.15,pos.z);scene.add(m);fx.push({m,t:0,life,max});}
@@ -753,7 +754,7 @@ function dropItem(l,pos){const k=SLOTS[Math.floor(Math.random()*SLOTS.length)],i
   sparks(pos,0xffd77a,10,1.4);
   if(S.auto&&isWorse(it)){const g=sellPrice(it);S.gold+=g;toast(`🤖 ${itName(it)} otomatik satıldı: +${g} altın`,'#a99a7a');hud();save();return;}
   if(S.inv.length>=INV){const g=sellPrice(it);S.gold+=g;toast(`🎒 Envanter dolu! ${itName(it)} ${g} altına satıldı`,'#ff8a7a');}
-  else{S.inv.push(it);const d=document.createElement('div');d.innerHTML=`🎁 <span style="color:${TIERC[it.t]}">${KINDS[it.k].e} ${itName(it)}</span>${(it.b||[]).length?` <span style="color:#c88cff">${'✦'.repeat(it.b.length)}</span>`:''} düştü!`;d.style.color='#ffe7b0';$('toast').appendChild(d);setTimeout(()=>d.remove(),3000);
+  else{S.inv.push(it);const d=document.createElement('div');d.innerHTML=`🎁 <span style="color:${TIERC[it.t]}">${KINDS[it.k].e} ${itName(it)}</span>${(it.b||[]).length?` <span style="color:#c88cff">${'✦'.repeat(it.b.length)}</span>`:''} düştü!`;d.style.color='#ffe7b0';pushToast(d);
     $('bInv').classList.add('new');}
   tone(1046,.12);setTimeout(()=>tone(1318,.2),90);hud();save();}
 $('bInv').onclick=()=>{$('bInv').classList.remove('new');openInv();};
