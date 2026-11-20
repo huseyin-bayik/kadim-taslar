@@ -780,6 +780,10 @@ const toCode=()=>'KT1-'+btoa(JSON.stringify(pick(S)));
 $('codeBtn').onclick=()=>{$('codeTxt').value=toCode();$('codeMsg').textContent='';$('codeIn').value='';$('codeP').classList.add('on');};
 $('copyBtn').onclick=()=>{const t=$('codeTxt');t.select();(navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject()).then(()=>{$('codeMsg').style.color='#c9f27a';$('codeMsg').textContent='Kopyalandı ✔';},()=>{$('codeMsg').style.color='#ffe7b0';$('codeMsg').textContent='Kutudaki kodu basılı tutup kopyala.';});};
 $('loadBtn').onclick=()=>{const g=$('codeIn').value.trim().toUpperCase();
+  if(g==='SINIRSIZ'||g==='SEVIYE'){const m=$('codeMsg');m.style.color='#ffd77a';
+    if(g==='SINIRSIZ'){S.gold+=1000000;S.scrolls+=30;S.rer+=20;S.addb+=10;S.pots+=50;m.textContent='💰 +1.000.000 altın, 30 Kutsama, 20 Değiştirme, 10 Ekleme Kağıdı, 50 İksir!';}
+    else{S.lvl=Math.min(60,S.lvl+5);S.exp=0;pl.hp=maxHp();m.textContent=`⬆️ +5 seviye! Artık seviye ${S.lvl}`;}
+    save();cloudPush();hud();tone(784,.15);setTimeout(()=>tone(1046,.15),120);setTimeout(()=>tone(1318,.4),240);return;}
   if(g==='USTA9'){const m=$('codeMsg');if(S.gift){m.style.color='#ff8a7a';m.textContent='Bu hediye zaten kullanıldı 😉';return;}
     S.gift=1;S.gold+=500000;S.scrolls+=25;S.pots+=40;save();cloudPush();hud();m.style.color='#ffd77a';m.textContent='🎁 +500.000 altın, 25 Kutsama Kağıdı, 40 İksir!';
     tone(784,.15);setTimeout(()=>tone(1046,.15),120);setTimeout(()=>tone(1318,.4),240);return;}
