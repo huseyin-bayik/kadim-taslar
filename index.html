@@ -1257,8 +1257,8 @@ function startGame(){$('play').onclick();}
 
 // ---------------- SETTINGS / GRAPHICS / CHARACTER SWITCH ----------------
 let GFX={q:1,fps:0};try{Object.assign(GFX,JSON.parse(localStorage.getItem('kadim_gfx')||'{}'));}catch(e){}
-function applyGfx(){const q=GFX.q,sh=q>0,type=q===2?THREE.PCFSoftShadowMap:THREE.PCFShadowMap;
-  renderer.setPixelRatio(Math.min(devicePixelRatio||1,[1,1.25,1.75][q]));
+function applyGfx(){const q=GFX.q,sh=q>0,type=THREE.PCFShadowMap;
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,[1,1.25,1.5][q]));
   if(renderer.shadowMap.enabled!==sh||renderer.shadowMap.type!==type){renderer.shadowMap.enabled=sh;renderer.shadowMap.type=type;
     if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}sun.shadow.mapSize.set(q===2?2048:1024,q===2?2048:1024);
     scene.traverse(o=>{if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.needsUpdate=true);});}
