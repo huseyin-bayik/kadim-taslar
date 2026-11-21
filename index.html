@@ -723,7 +723,7 @@ function beast(t){if(t.model)return t.model();const g=new THREE.Group(),b=t.boar
   if(t.eyes)for(const s of[-1,1])g.add(mesh(new THREE.BoxGeometry(.07,.05,.02),new THREE.MeshBasicMaterial({color:0xff3030}),s*.1,.88,.84,false));
   for(const [x,z] of [[-.16,.36],[.16,.36],[-.16,-.36],[.16,-.36]]){const j=new THREE.Group();j.position.set(x*(b?1.4:1),.42,z);j.add(box(.13,.42,.13,t.dark,0,-.21,0));g.add(j);p.legs.push(j);}
   return p;}
-var isNight=false,inDungeon=false,classRoot=null,classKey='',offhand=null,SKW=null;
+var MAXLVL=60,isNight=false,inDungeon=false,classRoot=null,classKey='',offhand=null,SKW=null;
 const mobs=[];
 function spawnMob(type,lvl,x,z,home){const t=TYPES[type],p=beast(t);p.g.position.set(x,0,z);scene.add(p.g);
   const hp=Math.round(t.hp*(1+.35*(lvl-1)));
@@ -1453,7 +1453,7 @@ npc('🧺 Satıcı',TOWN.x+6,TOWN.z+1,-.8,{body:0x8a3a5a,leg:0x2a3a4a,hair:0x2a1
 npc('🧙‍♀️ Büyücü Nine',TOWN.x-4,TOWN.z-7,.3,{body:0x4a2a6a,leg:0x2a1a3a,hair:0xd8d8d8,arm:0x4a2a6a},'ench');
 
 // ---------------- BOSS ENGINE (region bosses) ----------------
-const BOSS2=[],MAXLVL=60;
+const BOSS2=[];
 const anyBossFight=()=>boss.state==='fight'||(inDungeon&&queen.state==='fight')||BOSS2.some(b=>b.state==='fight');
 function makeBoss(o){const b=Object.assign({boss:true,dead:true,state:'sleep',hp:o.max,flash:0,atkT:0,skT:3,phase:0,respawn:1,busy:0,anim:0,col:{x:o.home.x,z:o.home.z,r:0}},o);
   b.lbl=mkLabel(`${o.icon} ${o.name} <span style="color:#ffd77a">Sv.${o.lvl}</span>`);b.lbl.style.fontSize='13px';colliders.push(b.col);b.onDmg=()=>bossHit(b);BOSS2.push(b);return b;}
