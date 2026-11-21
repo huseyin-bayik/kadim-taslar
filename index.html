@@ -29,7 +29,7 @@ body>canvas:first-child{position:fixed;inset:0}
 #hpb i{background:linear-gradient(#ff6a5a,#b3201a)}
 #enb{height:5px}#enb i{background:linear-gradient(#9ae4ff,#2a8ad0);transition:width .5s}#enb.low i{background:linear-gradient(#ffb070,#c0401a)}#enb.rest{box-shadow:0 0 6px #ffd77a;border-color:#ffd77a}#sleepT{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:64px;color:#cfe0ff;text-align:center}#sleepT small{font-size:17px;color:#a9b4d0}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
-#lifeP.act{background:none;align-items:flex-end;padding:8px;pointer-events:none}#lifeP.act .pn{pointer-events:auto;max-width:340px;max-height:40vh;padding:10px 12px;background:rgba(31,21,10,.9)}#lifeP.act h2{font-size:17px;margin:0 0 4px}#lifeP.act .ah{display:none}#lifeP.act #fsBox{font-size:28px!important;height:38px!important;line-height:38px!important}
+#lifeP.act{background:none;align-items:flex-end;justify-content:center;padding:8px;pointer-events:none}#lifeP.act .pn{pointer-events:auto;max-width:360px!important;max-height:42vh!important;padding:8px 12px;background:rgba(31,21,10,.9)}@media (orientation:landscape){#lifeP.act{align-items:center;justify-content:flex-end;padding-right:calc(8px + env(safe-area-inset-right))}#lifeP.act .pn{max-width:290px!important;max-height:94vh!important}}#lifeP.act h2{font-size:16px;margin:0 0 2px}#lifeP.act .pn p{font-size:12px;margin:2px 0}#lifeP.act .btn{padding:8px 12px;font-size:14px;margin:2px 0}#lifeP.act #lfBody{gap:3px!important}#lifeP.act .skr{padding:4px 6px;margin:3px 0;gap:7px}#lifeP.act .ski{width:32px;height:32px;font-size:17px}#lifeP.act .skt{font-size:12.5px}#lifeP.act .skr .btn{padding:6px 9px;font-size:12px}#lifeP.act .ah{display:none}#lifeP.act #fsBox{font-size:22px!important;height:30px!important;line-height:30px!important}
 #xpb{height:7px}#xpb i{background:linear-gradient(#ffe48a,#d39a1a)}
 #gold{font-weight:800;color:#ffd77a;font-size:14px;white-space:nowrap}
 #joy{left:0;bottom:0;width:48%;height:60%;}
@@ -1713,7 +1713,7 @@ function cXp(sk,x){const L=sk+'L',X=sk+'X';S[L]=S[L]||1;if(S[L]>=10)return;S[X]=
   while(S[L]<10&&S[X]>=cNeed(S[L])){S[X]-=cNeed(S[L]);S[L]++;toast(`🎉 ${sk==='fish'?'🎣 Balıkçılık':sk==='mine'?'⛏️ Madencilik':'🍳 Aşçılık'} seviye ${S[L]}!`,'#9fdcff');tone(659,.15);setTimeout(()=>tone(988,.3),120);}}
 const dot=c=>`<span style="color:${c}">◆</span>`;
 function skillLine(sk,ic,nm){const L=S[sk+'L']||1;return `<div style="font-size:12.5px;text-align:left">${ic} ${nm} <b>Sv.${L}</b>${L<10?`<div class="bar" style="height:6px"><i style="width:${(S[sk+'X']||0)/cNeed(L)*100}%;background:#6ac8ff"></i></div>`:' · <b style="color:#ffd77a">USTA</b>'}</div>`;}
-function toolBtn(kind){const t=cv(kind),N=kind==='rod'?RODS:PICKS;if(t>=3)return `<p style="font-size:12px;color:#c9f27a">${N[3]} · en iyisi sende</p>`;
+function toolBtn(kind){const t=cv(kind),N=kind==='rod'?RODS:PICKS;if(t>=3)return `<p class="ah" style="font-size:12px;color:#c9f27a">${N[3]} · en iyisi sende</p>`;
   return `<button class="btn g" id="tlBuy" style="width:100%" ${S.gold<TOOLP[t+1]?'disabled':''}>${t?'⬆️ ':'🛒 '}${N[t+1]} al · ${TOOLP[t+1].toLocaleString('tr-TR')} 🪙</button>`;}
 function bindTool(kind,re){if(!$('tlBuy'))return;$('tlBuy').onclick=()=>{const t=cv(kind);if(S.gold<TOOLP[t+1])return;S.gold-=TOOLP[t+1];S[kind]=t+1;save();hud();tone(660,.12);toast(`🛒 ${(kind==='rod'?RODS:PICKS)[t+1]} aldın!`,'#ffd77a');re();};}
 // ---- world: pond, fishing spots, mines, fires ----
