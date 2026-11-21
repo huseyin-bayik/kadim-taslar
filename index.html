@@ -27,6 +27,7 @@ body>canvas:first-child{position:fixed;inset:0}
 .bar i{display:block;height:100%;width:100%}
 .bar span{position:absolute;inset:0;font-size:9px;line-height:11px;text-align:center;font-weight:800;text-shadow:0 1px 2px #000}
 #hpb i{background:linear-gradient(#ff6a5a,#b3201a)}
+#enb{height:5px}#enb i{background:linear-gradient(#9ae4ff,#2a8ad0);transition:width .5s}#enb.low i{background:linear-gradient(#ffb070,#c0401a)}#enb.rest{box-shadow:0 0 6px #ffd77a;border-color:#ffd77a}#sleepT{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:64px;color:#cfe0ff;text-align:center}#sleepT small{font-size:17px;color:#a9b4d0}
 #xpb{height:7px}#xpb i{background:linear-gradient(#ffe48a,#d39a1a)}
 #gold{font-weight:800;color:#ffd77a;font-size:14px;white-space:nowrap}
 #joy{left:0;bottom:0;width:48%;height:60%;}
@@ -137,6 +138,7 @@ input,textarea{font-size:16px!important}
   <div class="card bars">
     <div class="bar" id="hpb"><i></i><span></span></div>
     <div class="bar" id="xpb"><i></i></div>
+    <div class="bar" id="enb"><i></i></div>
   </div>
   <div class="card" id="gold">🪙 0</div><div class="card" id="tod" style="font-size:15px;padding:5px 7px">☀️</div><div class="card" id="fps" style="display:none;font-size:12px;font-weight:800;padding:6px 7px">-- fps</div>
 </div>
@@ -253,6 +255,12 @@ input,textarea{font-size:16px!important}
   <button class="btn g" data-close>Vazgeç</button>
 </div></div>
 
+<div class="ov" id="lifeP"><div class="pn" style="max-width:440px;max-height:94vh;overflow-y:auto">
+  <h2 id="lfTitle"></h2>
+  <div id="lfBody" style="display:flex;flex-direction:column;gap:7px;width:100%"></div>
+  <button class="btn g" data-close>Kapat</button>
+</div></div>
+
 <div class="ov" id="setP"><div class="pn">
   <h2>⚙️ Ayarlar</h2>
   <p style="margin-bottom:4px">Grafik kalitesi</p>
@@ -260,6 +268,7 @@ input,textarea{font-size:16px!important}
   <p style="font-size:11.5px;color:#a99a7a">Takılma olursa Düşük'ü dene: gölgeler kapanır, çözünürlük düşer, oyun en akıcı hâline gelir.</p>
   <label class="chk"><input type="checkbox" id="fpsChk"> FPS göstergesi</label>
   <button class="btn g" id="setSnd" style="width:100%;max-width:300px"></button>
+  <button class="btn g" id="goHome" style="width:100%;max-width:300px">🏠 Eve dön</button>
   <button class="btn" id="chgChar" style="width:100%;max-width:300px">👥 Karakter Değiştir</button>
   <button class="btn g" data-close>Kapat</button>
 </div></div>
@@ -372,7 +381,7 @@ const TREES=[];let LEAF=null;
   const leaf=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),M(0xffffff),N*2);
   trunk.castShadow=leaf.castShadow=true;
   const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),col=new THREE.Color();let li=0;
-  for(let i=0;i<N;i++){let x,z,d;do{const a=Math.random()*Math.PI*2;d=rand(VILLAGE+4,WR+6);x=Math.cos(a)*d;z=Math.sin(a)*d;}while(Math.hypot(x-0,z+78)<17);
+  for(let i=0;i<N;i++){let x,z,d;do{const a=Math.random()*Math.PI*2;d=rand(VILLAGE+4,WR+6);x=Math.cos(a)*d;z=Math.sin(a)*d;}while(Math.hypot(x-0,z+78)<17||!farPlot(x,z,8));
     const s=rand(1.6,2.5);m4.compose(new V3(x,.7*s,z),q,new V3(s,s,s));trunk.setMatrixAt(i,m4);
     const pine=Math.random()<.4;
     for(let k=0;k<2;k++){const ls=s*(k?1.0:1.35)*(pine?.8:1);m4.compose(new V3(x,(1.6+k*1.0)*s,z),q.setFromEuler(new THREE.Euler(0,rand(0,3),0)),new V3(ls,ls*(pine?1.5:1),ls));
@@ -380,7 +389,7 @@ const TREES=[];let LEAF=null;
     q.identity();if(d<WR)colliders.push({x,z,r:.32*s});}
   scene.add(trunk,leaf);LEAF=leaf;
   // rocks & flowers
-  for(let i=0;i<70;i++){const a=Math.random()*Math.PI*2,d=rand(VILLAGE+2,WR),s=rand(.3,1.1);
+  for(let i=0;i<70;i++){const a=Math.random()*Math.PI*2,d=rand(VILLAGE+2,WR),s=rand(.3,1.1);if(!farPlot(Math.cos(a)*d,Math.sin(a)*d,7))continue;
     const r=mesh(new THREE.DodecahedronGeometry(s,0),M(0x8a8a86),Math.cos(a)*d,s*.4,Math.sin(a)*d);r.rotation.set(rand(0,3),rand(0,3),0);scene.add(r);if(s>.7)colliders.push({x:r.position.x,z:r.position.z,r:s*.8});}
 })();
 // village
@@ -564,9 +573,10 @@ function cleanItem(o){if(!o||typeof o!=='object'||!KINDS[o.k])return null;const 
 const defS=()=>({lvl:1,exp:0,gold:120,plus:0,pots:5,scrolls:1,ts:0,inv:[],eq:null,rer:0,addb:0,auto:0,book:0,cls:0});
 const S=defS();
 function resetS(){for(const k of Object.keys(S))delete S[k];Object.assign(S,defS());}
-const KEYS=['pbossK','dragonK','created','cls','queenK','pet','pets','horse','lvl','exp','gold','plus','pots','scrolls','ts','gift','rer','addb','auto','book','sp','skb','soul','bossK','qi','qc','dlast','dstreak'];
+const KEYS=['energy','innN','plot','house','restUntil','restB','pbossK','dragonK','created','cls','queenK','pet','pets','horse','lvl','exp','gold','plus','pots','scrolls','ts','gift','rer','addb','auto','book','sp','skb','soul','bossK','qi','qc','dlast','dstreak'];
 const pick=o=>{const r={};for(const k of KEYS)if(typeof o[k]==='number'&&isFinite(o[k]))r[k]=o[k];
   if(Array.isArray(o.inv))r.inv=o.inv.map(cleanItem).filter(Boolean).slice(0,INV);
+  if(Array.isArray(o.depot))r.depot=o.depot.map(cleanItem).filter(Boolean).slice(0,36);
   if(o.sk&&typeof o.sk==='object'){r.sk={};for(const k of ['dash','spin','roar','quake'])r.sk[k]=clamp(o.sk[k]|0,0,31);}
   if(o.eq&&typeof o.eq==='object'){r.eq={};for(const k of SLOTS){const c=cleanItem(o.eq[k]);if(c&&c.k===k)r.eq[k]=c;}}return r;};
 function ensureEq(){if(!S.eq||typeof S.eq!=='object'){S.eq={weapon:{k:'weapon',t:0,p:S.plus||0},shield:{k:'shield',t:0,p:0}};}if(!Array.isArray(S.inv))S.inv=[];}
@@ -602,7 +612,7 @@ async function cloudInit(){
     readyPlay();setSaveInfo('☁️ Karakterlerin Claude hesabına kaydediliyor. Her cihazda kaldığın yerden devam.');
   }catch(e){clearTimeout(timer);readyPlay();setSaveInfo('📱 Hesap kaydına ulaşılamadı, bu cihazda kaydediliyor.');}}
 var petB=k=>0;
-const maxHp=()=>Math.round((100+(S.lvl-1)*30+TOT.hp)*(1+petB('hp')/100)*CLS[S.cls||0].hp), atk=()=>Math.round((10+(S.lvl-1)*3+TOT.atk)*CLS[S.cls||0].atk*(typeof pl!=='undefined'&&pl.buffT>0?1+pl.buffAtk/100:1)*(1+petB('atk')/100)), expNeed=l=>Math.floor(60*Math.pow(l,1.6));
+const maxHp=()=>Math.round((100+(S.lvl-1)*30+TOT.hp)*(1+petB('hp')/100)*CLS[S.cls||0].hp), atk=()=>Math.round((10+(S.lvl-1)*3+TOT.atk)*CLS[S.cls||0].atk*(typeof pl!=='undefined'&&pl.buffT>0?1+pl.buffAtk/100:1)*(1+petB('atk')/100)*fatigue()), expNeed=l=>Math.floor(60*Math.pow(l,1.6));
 const pl={pos:new V3(0,0,4),hp:maxHp(),face:0,atkT:0,atkAnim:0,s1:0,s2:0,potT:0,lastHit:-99,dead:false,dash:0,dashDir:new V3(),spin:0,walk:0};
 
 const SWCOL=[0x9a8a7a,0xdfe6ee,0xe8eef6,0xd8c8ff,0xffd0a0],ARC=[0x8a5a3a,0x8a9098,0x6a7a9a,0x6a4a8a,0xb04020,0xa01414,0xd8a820],HELC=[0x7a5030,0xb8bcc4,0xc9d0da,0x8a6ab0,0xd06a20,0xc81e1e,0xf0c030],SHC=[0x7a5030,0x8a8f98,0x4a5a7a,0x5a3a7a,0xa83a1a,0xa81818,0xe0b428],BOC=[0x5a3a1a,0x6a6f78,0x3a5a3a,0x4a6aa0,0xa04020,0x981010,0xd0a020];
@@ -727,15 +737,15 @@ function killMob(m){m.dead=true;m.label.remove();scene.remove(m.p.g);questEv('ki
 // packs
 const packs=[];
 function zoneFor(d){const lvl=clamp(Math.floor(1+(d-VILLAGE-2)/6),1,12);return {lvl,type:d<44?'wolf':d<68?'boar':'dwolf'};}
-for(let i=0;i<20;i++){let a=i/20*Math.PI*2+rand(-.1,.1),d=i%2?rand(24,46):rand(50,86);if(Math.hypot(Math.cos(a)*d,Math.sin(a)*d+78)<20)d=40;const z=zoneFor(d);
+for(let i=0;i<20;i++){let a=i/20*Math.PI*2+rand(-.1,.1),d=i%2?rand(24,46):rand(50,86);if(Math.hypot(Math.cos(a)*d,Math.sin(a)*d+78)<20)d=40;for(let t=0;t<10&&!farPlot(Math.cos(a)*d,Math.sin(a)*d,20);t++)a+=.35;const z=zoneFor(d);
   packs.push({x:Math.cos(a)*d,z:Math.sin(a)*d,lvl:z.lvl,type:z.type,n:d<30?2:3,mobs:[],respawn:0});}
 function fillPack(pk){pk.mobs=pk.mobs.filter(m=>!m.dead);while(pk.mobs.length<pk.n){const m=spawnMob(pk.type,clamp(pk.lvl+Math.floor(rand(0,2)),1,40),pk.x+rand(-3,3),pk.z+rand(-3,3),{x:pk.x,z:pk.z});m.pack=pk;pk.mobs.push(m);}}
 packs.forEach(fillPack);
 
 // ---------------- metin stones ----------------
 const stones=[];
-function spawnStone(near,reg){let x,z,d,ok;for(let k=0;k<30;k++){if(reg===2){x=-400+rand(-58,58);z=rand(-54,28);d=0;ok=stones.every(s=>Math.hypot(s.x-x,s.z-z)>14)&&Math.hypot(x+400,z-8)>22&&Math.hypot(x+356,z+46)>13&&Math.hypot(x+446,z-24)>15&&Math.hypot(x+438,z+50)>17;}
-    else{const a=Math.random()*Math.PI*2;d=near?rand(24,38):rand(26,84);x=Math.cos(a)*d;z=Math.sin(a)*d;ok=stones.every(s=>Math.hypot(s.x-x,s.z-z)>15)&&Math.hypot(x,z+78)>20;}if(ok)break;}
+function spawnStone(near,reg){let x,z,d,ok;for(let k=0;k<30;k++){if(reg===2){x=-400+rand(-58,58);z=rand(-54,28);d=0;ok=stones.every(s=>Math.hypot(s.x-x,s.z-z)>14)&&Math.hypot(x+400,z-8)>22&&Math.hypot(x+356,z+46)>13&&Math.hypot(x+446,z-24)>15&&Math.hypot(x+438,z+50)>17&&farPlot(x,z,13);}
+    else{const a=Math.random()*Math.PI*2;d=near?rand(24,38):rand(26,84);x=Math.cos(a)*d;z=Math.sin(a)*d;ok=stones.every(s=>Math.hypot(s.x-x,s.z-z)>15)&&Math.hypot(x,z+78)>20&&farPlot(x,z,13);}if(ok)break;}
   const zl=reg===2?{lvl:21+Math.floor(rand(0,9)),type:z>12?'crab':z<-26?'rgolem':'pirate'}:zoneFor(d),lvl=zl.lvl+1,g=new THREE.Group();g.position.set(x,0,z);
   const rock=mesh(new THREE.DodecahedronGeometry(1,0),M(reg===2?0x4a2424:0x3d3644),0,1.9,0);rock.scale.set(1.1,2,1.1);g.add(rock);
   const veins=new THREE.Mesh(new THREE.DodecahedronGeometry(1.03,0),new THREE.MeshBasicMaterial({color:reg===2?0xffb020:0xff2a55,wireframe:true,transparent:true,opacity:.75}));veins.scale.copy(rock.scale);veins.position.copy(rock.position);g.add(veins);
@@ -1265,7 +1275,7 @@ function applyClass(){ensureEq();ensureSk();if(!SKW)SKW=JSON.parse(JSON.stringif
   swordT=-1;for(const k in built)built[k]='';classKey='';if(pl.stealthT>0)setGhost(false);
   Object.assign(pl,{buffT:0,buffLeech:0,stealthT:0,ambush:false,shieldHp:0,shieldT:0,regenT:0,leap:null,dead:false});showShield(false);pl.pos.set(0,0,4);
   recalc();updateLook();try{setPet(S.pet||0);}catch(e){}if(riding)setRide(false);$('bHorse').style.display=S.horse?'block':'none';
-  renderSkillBtns();try{renderQuest();}catch(e){}pl.hp=maxHp();hud();}
+  renderSkillBtns();try{renderQuest();}catch(e){}try{lifeInit();}catch(e){console.error(e);}pl.hp=maxHp();hud();}
 // ---- character slots UI
 let delArm=-1;
 function renderSlots(loading){const L=$('slotList');if(loading){L.innerHTML='<div style="color:#d9c49a;padding:14px">⏳ Karakterler yükleniyor...</div>';return;}
@@ -1368,7 +1378,7 @@ const regionOf=x=>x<-300?2:x>300?3:1;
   // palms (instanced)
   const N=46,trunk=new THREE.InstancedMesh(new THREE.CylinderGeometry(.18,.26,1,6),M(0x8a6a44),N*3),leaf=new THREE.InstancedMesh(new THREE.BoxGeometry(1,.06,.34),M(0x3a8a3a),N*7);trunk.castShadow=leaf.castShadow=true;
   const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),v=new V3(),sc=new V3();let ti=0,li=0;
-  for(let i=0;i<N;i++){let x,z;do{x=rand(-62,62);z=rand(-58,30);}while(Math.hypot(x-(TOWN.x-R2.x),z-(TOWN.z-R2.z))<19||Math.hypot(x-44,z+46)<12);x+=R2.x;z+=R2.z;
+  for(let i=0;i<N;i++){let x,z;do{x=rand(-62,62);z=rand(-58,30);}while(Math.hypot(x-(TOWN.x-R2.x),z-(TOWN.z-R2.z))<19||Math.hypot(x-44,z+46)<12||!farPlot(x+R2.x,z+R2.z,8));x+=R2.x;z+=R2.z;
     const h=rand(4.5,6.5),lean=rand(-.25,.25),dir=rand(0,6.28);let px=x,pz=z,py=0;
     for(let k=0;k<3;k++){const sx=Math.sin(lean*(k+1)*.5)*Math.cos(dir),sz=Math.sin(lean*(k+1)*.5)*Math.sin(dir);e.set(sx*.6,0,-sz*.6);q.setFromEuler(e);
       m4.compose(v.set(px,py+h/6,pz),q,sc.set(1-k*.12,h/3,1-k*.12));trunk.setMatrixAt(ti++,m4);px+=sx*h/3;pz+=sz*h/3;py+=h/3;}
@@ -1422,7 +1432,7 @@ TYPES.rgolem={name:'Kaya Golemi',hp:300,dmg:28,exp:95,spd:3.2,model:()=>{const g
     const a=new THREE.Group();a.position.set(s*.95,2,0);const am=new THREE.Mesh(D,rm);am.scale.set(.3,.65,.3);am.position.y=-.6;a.add(am);g.add(a);legs.push(a);}
   return {g,legs,body};}};
 // region packs
-for(let i=0;i<16;i++){let x,z;do{x=rand(-60,60);z=rand(-56,28);}while(Math.hypot(x-(TOWN.x-R2.x),z-(TOWN.z-R2.z))<24||Math.hypot(x-44,z+46)<12||Math.hypot(x+46,z-24)<17||Math.hypot(x+38,z+50)<19);
+for(let i=0;i<16;i++){let x,z;do{x=rand(-60,60);z=rand(-56,28);}while(Math.hypot(x-(TOWN.x-R2.x),z-(TOWN.z-R2.z))<24||Math.hypot(x-44,z+46)<12||Math.hypot(x+46,z-24)<17||Math.hypot(x+38,z+50)<19||!farPlot(x+R2.x,z+R2.z,18));
   const type=z>12?'crab':z<-26?'rgolem':'pirate',lvl=type==='crab'?18+Math.floor(rand(0,4)):type==='pirate'?22+Math.floor(rand(0,4)):26+Math.floor(rand(0,4));
   const pk={x:R2.x+x,z:R2.z+z,lvl,type,n:3,mobs:[],respawn:0,reg:2};packs.push(pk);fillPack(pk);}
 for(let i=0;i<6;i++)spawnStone(false,2);
@@ -1529,10 +1539,168 @@ const dragon=makeBoss({name:'Toros Ejderi',icon:'🐉',lvl:40,max:160000,home:DL
   reward:p=>bossReward(p,{name:'Toros Ejderi',lvl:40,exp:40000,g0:250000,g1:400000,items:[[6,3],[5,2],[5,2]],soul:10,skb:10,book:10,addb:3})});
 spawnB(captain);spawnB(dragon);
 
+// ---------------- life mode: energy, inn, plots & houses ----------------
+function farPlot(x,z,m){m=m||9;if(x>16&&x<47&&Math.abs(z)<15)return false;
+  for(const p of [[27,-8],[27,8],[39,-8],[39,8],[-422,0],[-378,0],[-422,15],[-378,15]])if(Math.hypot(x-p[0],z-p[1])<m)return false;return true;}
+function fatigue(){const e=typeof S.energy==='number'?S.energy:100;return e<10?.75:e<30?.9:1;}
+function restMul(){return (S.restUntil||0)>Date.now()?1+(S.restB||0)/100:1;}
+const HOUSES=[null,{n:'Kulübe',my:'Kulüben',loc:'Kulübende',dat:'Kulübe\'ye',price:50000,dep:12,rest:10,r:2.2,door:2.6},{n:'Ev',my:'Evin',loc:'Evinde',dat:'Ev\'e',price:150000,dep:24,rest:15,r:2.9,door:3.3},{n:'Konak',my:'Konağın',loc:'Konağında',dat:'Konak\'a',price:500000,dep:36,rest:25,r:3.7,door:4.1}];
+const PLOTS=[{x:27,z:-8,rot:0},{x:27,z:8,rot:Math.PI},{x:39,z:-8,rot:0},{x:39,z:8,rot:Math.PI},
+  {x:-422,z:0,rot:Math.PI/2},{x:-378,z:0,rot:-Math.PI/2},{x:-422,z:15,rot:Math.PI/2},{x:-378,z:15,rot:-Math.PI/2}];
+PLOTS.forEach((p,i)=>{p.id=i+1;p.reg=p.x<-300?2:1;p.price=p.reg===2?250000:100000;p.fx=Math.sin(p.rot);p.fz=Math.cos(p.rot);
+  p.where=p.reg===2?'Sahil Kasabası':'Köy';p.no=(i%4)+1;});
+const plotOf=()=>S.plot?PLOTS[S.plot-1]:null;
+function signTex(l1,l2,bg){const c=document.createElement('canvas');c.width=256;c.height=128;const g=c.getContext('2d');g.fillStyle=bg;g.fillRect(0,0,256,128);
+  g.strokeStyle='#3a2410';g.lineWidth=10;g.strokeRect(5,5,246,118);g.fillStyle='#fff';g.textAlign='center';g.font='bold 44px sans-serif';g.fillText(l1,128,58);
+  g.font='bold 30px sans-serif';g.fillStyle='#ffe7b0';g.fillText(l2,128,104);return new THREE.CanvasTexture(c);}
+function signBoard(g,l1,l2,bg,x,z,h){g.add(box(.14,h,.14,0x5a3a1a,x-.75,h/2,z));g.add(box(.14,h,.14,0x5a3a1a,x+.75,h/2,z));
+  const b=new THREE.Mesh(new THREE.PlaneGeometry(1.9,.95),new THREE.MeshBasicMaterial({map:signTex(l1,l2,bg),side:THREE.DoubleSide}));b.position.set(x,h-.45,z+.08);g.add(b);}
+// road + ground for the village quarter
+(function quarter(){const road=new THREE.Mesh(new THREE.PlaneGeometry(32,3.2),new THREE.MeshLambertMaterial({color:0xb09a72}));road.rotation.x=-Math.PI/2;road.position.set(31.5,.025,0);road.receiveShadow=true;scene.add(road);
+  for(const x of[18,47])for(const s of[-1,1]){scene.add(mesh(new THREE.BoxGeometry(.2,2.2,.2),M(0x4a3420),x,1.1,s*2.1));scene.add(mesh(new THREE.BoxGeometry(.3,.35,.3),new THREE.MeshBasicMaterial({color:0xffd27a}),x,2.3,s*2.1,false));colliders.push({x,z:s*2.1,r:.25});}
+  const g=new THREE.Group();signBoard(g,'YENİ MAHALLE','Satılık arsalar','#3a6a3a',0,0,2.4);g.position.set(18.6,0,-3.6);g.rotation.y=-Math.PI/2+.4;scene.add(g);})();
+// house models
+function hutModel(){const g=new THREE.Group();const w=box(3.4,2.2,3,0x8a6038,0,1.1,0);w.receiveShadow=true;g.add(w);
+  for(let y=.3;y<2.2;y+=.42)g.add(box(3.46,.06,3.06,0x6a4422,0,y,0));
+  const r=mesh(new THREE.ConeGeometry(2.9,1.6,4),M(0x5a3a22),0,2.95,0);r.rotation.y=Math.PI/4;g.add(r);
+  g.add(box(.8,1.4,.08,0x4a2a12,0,.7,1.52));g.add(box(.55,.5,.08,winMat,1.05,1.4,1.52));
+  const st=box(.9,.7,.9,0x7a5634,-2.3,.35,.6);g.add(st);for(let i=0;i<4;i++){const l=mesh(new THREE.CylinderGeometry(.14,.14,.9,6),M(0x8a5a2e),-2.3+(i%2)*.3-.15,.85+(i>1?.25:0),.6);l.rotation.z=Math.PI/2;g.add(l);}
+  return g;}
+function evModel(){const g=new THREE.Group();const w=box(4.6,2.8,4.2,0xf0e4c8,0,1.4,0);w.receiveShadow=true;g.add(w);
+  const r=mesh(new THREE.ConeGeometry(3.9,2.1,4),M(0xb8452c),0,3.85,0);r.rotation.y=Math.PI/4;r.scale.set(1.05,1,.98);g.add(r);
+  g.add(box(.5,1.4,.5,0x9a8a7a,1.3,4.1,-.6));g.add(box(.6,.12,.6,0x5a4a3a,1.3,4.85,-.6));
+  g.add(box(.95,1.6,.08,0x6a3a1a,0,.8,2.12));g.add(box(1.3,.12,.6,0xb8452c,0,1.8,2.3));
+  for(const s of[-1,1]){g.add(box(.75,.7,.08,winMat,s*1.5,1.7,2.12));g.add(box(.2,.72,.06,0x3a7aa8,s*1.5+s*.5,1.7,2.15));g.add(box(.75,.7,.08,winMat,2.32*s,1.7,0).rotateY(Math.PI/2));}
+  for(const s of[-1,1]){g.add(mesh(new THREE.CylinderGeometry(.22,.17,.35,8),M(0xb0603a),s*.9,.18,2.55));g.add(mesh(new THREE.IcosahedronGeometry(.28,0),M(0xd04a7a),s*.9,.5,2.55));}
+  return g;}
+function konakModel(){const g=new THREE.Group(),WH=0xf6f1e6;const w=box(6.4,2.8,5.2,WH,0,1.4,0);w.receiveShadow=true;g.add(w);
+  g.add(box(6.6,.18,5.4,0xd8cdb8,0,2.85,0));const u=box(5.4,2.4,4.4,WH,0,4.1,-.2);g.add(u);
+  const r=mesh(new THREE.ConeGeometry(4.6,2.2,4),M(0xc0402a),0,6.4,-.2);r.rotation.y=Math.PI/4;r.scale.set(1.1,1,.9);g.add(r);
+  g.add(box(.5,1.3,.5,0xe0d6c4,-1.8,6.6,-1));
+  // entrance with columns & balcony
+  g.add(box(1.2,2,.08,0x5a3218,0,1,2.62));for(const s of[-1,1]){g.add(mesh(new THREE.CylinderGeometry(.16,.18,2.8,8),M(0xffffff),s*1.1,1.4,3.3));}
+  g.add(box(3,.16,1.5,0xd8cdb8,0,2.88,3.1));for(let i=0;i<9;i++)g.add(box(.06,.55,.06,0xffffff,-1.4+i*.35,3.2,3.8));g.add(box(3,.07,.07,0xffffff,0,3.48,3.8));
+  for(const s of[-1,1]){g.add(box(.8,.9,.08,winMat,s*2.2,1.6,2.62));g.add(box(.22,.92,.06,0x2a6aa8,s*2.2+s*.52,1.6,2.65));g.add(box(.22,.92,.06,0x2a6aa8,s*2.2-s*.52,1.6,2.65));
+    g.add(box(.7,.9,.08,winMat,s*1.6,4.2,2.02));g.add(box(.2,.92,.06,0x2a6aa8,s*1.6+s*.47,4.2,2.05));}
+  g.add(box(.9,1.5,.08,winMat,0,4.0,2.02));
+  // bougainvillea
+  for(let i=0;i<9;i++)g.add(mesh(new THREE.IcosahedronGeometry(rand(.35,.6),0),M(i%3?0xd8307a:0xb02a6a),3.25,.6+i*.38+rand(-.2,.2),1.6-i*.25));
+  // lemon tree & lanterns
+  const t=new THREE.Group();t.add(mesh(new THREE.CylinderGeometry(.12,.16,1.2,6),M(0x6b4a2b),0,.6,0));t.add(mesh(new THREE.IcosahedronGeometry(.9,0),M(0x3a7a3a),0,1.6,0));
+  for(let i=0;i<6;i++)t.add(mesh(new THREE.IcosahedronGeometry(.12,0),M(0xffd820),Math.cos(i)*.7,1.4+Math.sin(i*2)*.4,Math.sin(i)*.7));t.position.set(-3.4,0,3.4);g.add(t);
+  for(const s of[-1,1]){g.add(box(.12,1.6,.12,0x2a2a2a,s*1.9,.8,4.4));g.add(mesh(new THREE.BoxGeometry(.3,.36,.3),new THREE.MeshBasicMaterial({color:0xffd27a}),s*1.9,1.75,4.4,false));}
+  return g;}
+// plots
+const plotCol=[];
+PLOTS.forEach(p=>{p.col={x:p.x,z:p.z,r:0};colliders.push(p.col);
+  p.door=pseudoNpc('🪧 Satılık Arsa',new V3(p.x+p.fx*4.7,0,p.z+p.fz*4.7),'plot');p.door.plot=p;p.grp=null;p.state='';});
+function buildPlot(p){const own=S.plot===p.id,h=own?(S.house|0):0,st=own+'_'+h;if(p.state===st)return;p.state=st;
+  if(p.grp)scene.remove(p.grp);const g=new THREE.Group();g.position.set(p.x,0,p.z);g.rotation.y=p.rot;
+  const gr=new THREE.Mesh(new THREE.PlaneGeometry(9,9),new THREE.MeshLambertMaterial({color:own?(p.reg===2?0x8ab05a:0x6a9a4a):(p.reg===2?0xd8c49a:0xa08a5a)}));gr.rotation.x=-Math.PI/2;gr.position.y=.03;gr.receiveShadow=true;g.add(gr);
+  for(const sx of[-1,1])for(const sz of[-1,1])g.add(box(.18,.6,.18,0x7a5634,sx*4.4,.3,sz*4.4));
+  if(own&&h){for(const sx of[-1,1]){for(let i=0;i<7;i++)g.add(box(.1,.7,.1,0x7a5634,sx*4.4,.35,-4.4+i*1.47));g.add(box(.06,.08,8.8,0x7a5634,sx*4.4,.55,0));}
+    for(const sx of[-1,1]){g.add(box(3.2,.08,.06,0x7a5634,sx*2.8,.55,4.4));for(let i=0;i<4;i++)g.add(box(.1,.7,.1,0x7a5634,sx*(1.4+i*.95),.35,4.4));}
+    g.add(box(1.2,.04,4,0xc8b890,0,.04,2.5));}
+  if(!own)signBoard(g,'SATILIK',p.price.toLocaleString('tr-TR')+' 🪙','#a0302a',0,4.1,2.2);
+  else if(!h){signBoard(g,'ARSAN','İnşaata hazır','#2a6a3a',0,4.1,2.2);for(let i=0;i<5;i++){const l=mesh(new THREE.CylinderGeometry(.15,.15,2.2,6),M(0x9a6a3a),-1.5,.16+(i>2?.28:0),-1+(i%3)*.32);l.rotation.z=Math.PI/2;g.add(l);}g.add(box(1,.5,1,0xb0a490,1.6,.25,-1));}
+  else{const m=h===1?hutModel():h===2?evModel():konakModel();g.add(m);m.traverse(o=>{if(o.isMesh)o.castShadow=true;});}
+  scene.add(g);p.grp=g;p.col.r=own&&h?HOUSES[h].r:0;
+  const nm=!own?'🪧 Satılık Arsa':!h?'🪧 Arsan':'🏠 '+HOUSES[h].my;p.door.name=nm;p.door.label.firstChild.textContent=nm;}
+function refreshPlots(){for(const p of PLOTS)buildPlot(p);}
+// inn signs & NPCs
+(function innSigns(){const a=new THREE.Group();signBoard(a,'HAN','Hancı Hatice','#7a3a1a',0,0,2.5);a.position.set(-7.2,0,5.6);a.rotation.y=2.2;scene.add(a);
+  const b=new THREE.Group();signBoard(b,'HAN','Deniz Kokusu','#1a4a7a',0,0,2.5);b.position.set(TOWN.x+9,0,TOWN.z+7.5);b.rotation.y=-2.3;scene.add(b);})();
+npc('🏨 Hancı',-7.6,3.6,-2.0,{body:0x7a3a2a,leg:0x3a2a1a,hair:0x6a4a2a,belt:0xe0c060},'inn');
+npc('🏨 Hancı',TOWN.x+8.6,TOWN.z+10.2,-2.5,{body:0x2a5a8a,leg:0x2a2a3a,hair:0x2a1a10,belt:0xe0c060},'inn');
+npc('🏘️ Emlakçı',12.4,-3.4,-1.2,{body:0x3a3a4a,leg:0x2a2a2a,hair:0x1a1a1a,belt:0xc9a35c},'estate');
+npc('🏘️ Emlakçı',TOWN.x-9,TOWN.z+10.4,2.6,{body:0x3a3a4a,leg:0x2a2a2a,hair:0x1a1a1a,belt:0xc9a35c},'estate');
+// energy
+let lifeWarn=0;
+function lifeInit(){if(typeof S.energy!=='number')S.energy=100;if(!Array.isArray(S.depot))S.depot=[];lifeWarn=S.energy<10?2:S.energy<30?1:0;refreshPlots();}
+function lifeTick(dt){if(!started||pl.dead)return;ensureLife();
+  const safe=Math.hypot(pl.pos.x,pl.pos.z)<VILLAGE+2||Math.hypot(pl.pos.x-TOWN.x,pl.pos.z-TOWN.z)<16||(pl.pos.x>16&&pl.pos.x<47&&Math.abs(pl.pos.z)<15);
+  S.energy=Math.max(0,S.energy-dt*100/2700*(S.house>=3?.75:1)*(safe?.35:1));
+  const w=S.energy<10?2:S.energy<30?1:0;if(w>lifeWarn){toast(w===2?'😫 Çok yorgunsun! Saldırı ve hız -%25. Handa ya da evinde uyu':'🥱 Yoruldun… Saldırı ve hız -%10. Dinlenmek iyi gelir','#ffb070');}lifeWarn=w;}
+function hudLife(){const e=$('enb');if(!e)return;ensureLife();e.querySelector('i').style.width=S.energy+'%';e.classList.toggle('low',S.energy<30);e.classList.toggle('rest',restMul()>1);}
+// sleeping
+function sleepNow(bonus,mins,where){closeLifeP();const f=$('fade');let t=$('sleepT');if(!t){t=document.createElement('div');t.id='sleepT';f.appendChild(t);}
+  t.innerHTML=`💤<br><small>${where}</small>`;f.classList.add('on');tone(330,.5,'sine',.05,220);
+  setTimeout(()=>{S.energy=100;pl.hp=maxHp();S.restUntil=Date.now()+mins*60000;S.restB=bonus;lifeWarn=0;save();hud();
+    setTimeout(()=>{f.classList.remove('on');toast(`☀️ Dinlenmiş uyandın! Enerji ve can doldu · ✨ EXP +%${bonus} (${mins} dk)`,'#ffd77a');tone(523,.15);setTimeout(()=>tone(784,.3),140);ring(pl.pos,0xffd77a,5,.8);},500);},1900);}
+const innPrice=()=>100+S.lvl*20;
+function closeLifeP(){$('lifeP').classList.remove('on');}
+function lifeP(title,html){$('lfTitle').textContent=title;$('lfBody').innerHTML=html;$('lifeP').classList.add('on');tone(440,.08);}
+const fmt=n=>n.toLocaleString('tr-TR');
+function ensureLife(){if(typeof S.energy!=='number')S.energy=100;if(!Array.isArray(S.depot))S.depot=[];}
+function openLife(id){ensureLife();
+  if(id==='inn'){const pr=innPrice(),town=regionOf(pl.pos.x)===2;
+    lifeP(town?'🏨 Deniz Kokusu Hanı':'🏨 Hatice Hanım\'ın Hanı',`<p>“${town?'Dalga sesiyle uyumak gibisi yok yiğidim.':'Sıcak çorba, temiz yatak. Yorgun savaşçıya kapımız hep açık.'}”</p>
+    <p style="font-size:13px">⚡ Enerjin: <b>${Math.round(S.energy)}%</b>${S.innN?` · 🗝️ Odanda <b>${S.innN}</b> gece kaldı`:''}</p>
+    ${S.innN?'<button class="btn" id="lfA" style="width:100%">🛏️ Odanda uyu (kalan '+S.innN+' gece)</button>':''}
+    <button class="btn" id="lfB" style="width:100%" ${S.gold<pr?'disabled':''}>🛏️ Bir gece kal · ${fmt(pr)} 🪙</button>
+    <button class="btn g" id="lfC" style="width:100%" ${S.gold<pr*5?'disabled':''}>🗝️ 7 gecelik oda · ${fmt(pr*5)} 🪙 <small>(2 gece bedava)</small></button>
+    <p style="font-size:11.5px;color:#a99a7a">Uyuyunca enerji ve can dolar, 10 dakika boyunca EXP +%10 kazanırsın.</p>`);
+    if($('lfA'))$('lfA').onclick=()=>{S.innN--;sleepNow(10,10,'Handa uyuyorsun…');};
+    $('lfB').onclick=()=>{if(S.gold<pr)return;S.gold-=pr;sleepNow(10,10,'Handa uyuyorsun…');};
+    $('lfC').onclick=()=>{if(S.gold<pr*5)return;S.gold-=pr*5;S.innN=(S.innN||0)+6;toast('🗝️ 7 gecelik oda tutuldu, ilk gece şimdi!','#ffd77a');sleepNow(10,10,'Handa uyuyorsun…');};return;}
+  if(id==='estate'){const reg=regionOf(pl.pos.x)===2?2:1,mine=plotOf();
+    const list=PLOTS.filter(p=>p.reg===reg).map(p=>`<div class="skr"><div class="ski" style="border-color:#c9a35c">${S.plot===p.id?'🏠':'🪧'}</div><div class="skt"><b>${p.where} · Arsa ${p.no}</b><br><small>${S.plot===p.id?'Senin arsan':fmt(p.price)+' 🪙'}</small></div>
+      <div>${S.plot===p.id?'<b style="color:#c9f27a">Senin</b>':S.plot?'':`<button class="btn" data-buy="${p.id}" ${S.gold<p.price?'disabled':''}>Satın al</button>`}</div></div>`).join('');
+    const val=mine?Math.round((mine.price+HOUSES.slice(1,(S.house|0)+1).reduce((a,h)=>a+h.price,0))*.6):0;
+    lifeP('🏘️ Emlakçı Rıza',`<p>“${reg===2?'Denize sıfır, Toroslara nazır! Böyle arsa bir daha bulunmaz.':'Köyün doğusunda yeni mahalle kuruluyor. Komşun olur, rahat edersin.'}”</p>${list}
+      <p style="font-size:12px;color:#a99a7a">Her karakter bir arsa alabilir. Arsana önce Kulübe kurarsın, sonra Ev ve Konak'a büyütürsün. ${reg===1?'Sahil Kasabası\'nda da arsalar var.':'Köyde daha ucuz arsalar var.'}</p>
+      ${mine?`<p style="font-size:13px">Arsan: <b>${mine.where} · Arsa ${mine.no}</b>${S.house?' · '+HOUSES[S.house].n:''}</p><button class="btn g" id="lfSell" style="width:100%">💰 Arsanı sat · ${fmt(val)} 🪙</button>`:''}`);
+    $('lfBody').querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>buyPlot(+b.dataset.buy));
+    if($('lfSell'))$('lfSell').onclick=()=>{if(S.depot.length){toast('📦 Önce depodaki eşyaları çantana al','#ff8a7a');return;}
+      if(!$('lfSell').dataset.ok){$('lfSell').dataset.ok=1;$('lfSell').textContent='⚠️ Emin misin? Tekrar dokun';return;}
+      S.gold+=val;S.plot=0;S.house=0;save();hud();refreshPlots();closeLifeP();toast(`💰 Arsan satıldı: +${fmt(val)} altın`,'#ffd77a');};return;}
+  if(id==='plot'){const p=nearNpc&&nearNpc.plot;if(!p)return;
+    if(S.plot===p.id){openHome(p);return;}
+    lifeP(`🪧 ${p.where} · Arsa ${p.no}`,`<p>${p.reg===2?'Denize yürüme mesafesinde, palmiyeler arasında güzel bir arsa.':'Köyün yeni mahallesinde, yolu kenarında düz bir arsa.'}</p>
+      <p style="font-size:15px">Fiyat: <b>${fmt(p.price)} 🪙</b></p>
+      ${S.plot?`<p style="color:#ffb0a0;font-size:13px">Zaten bir arsan var (${plotOf().where} · Arsa ${plotOf().no}). Yenisini almak için önce Emlakçı'ya sat.</p>`:`<button class="btn" id="lfBuy" style="width:100%" ${S.gold<p.price?'disabled':''}>🤝 Satın al</button>`}`);
+    if($('lfBuy'))$('lfBuy').onclick=()=>buyPlot(p.id);return;}
+  if(id==='home'){const p=plotOf();if(p)openHome(p);}}
+function buyPlot(id){const p=PLOTS[id-1];if(S.plot||S.gold<p.price)return;S.gold-=p.price;S.plot=id;S.house=0;save();hud();refreshPlots();closeLifeP();
+  toast(`🤝 Tapun hazır! ${p.where} · Arsa ${p.no} artık senin. Arsana gidip Kulübe kur`,'#ffd77a');tone(523,.15);setTimeout(()=>tone(659,.15),120);setTimeout(()=>tone(988,.35),240);}
+function openHome(p){const h=S.house|0,H=HOUSES[h],nx=HOUSES[h+1];
+  let html='';
+  if(!h)html+=`<p>Arsan boş. Ustalar hazır bekliyor.</p>`;
+  else html+=`<p style="font-size:13px">⚡ Enerjin: <b>${Math.round(S.energy)}%</b> · 📦 Depo: <b>${S.depot.length}/${H.dep}</b></p>
+    <button class="btn" id="lfSleep" style="width:100%">🛏️ Uyu · bedava · EXP +%${H.rest} (15 dk)</button>
+    <button class="btn" id="lfDep" style="width:100%">📦 Depo</button>`;
+  if(nx)html+=`<button class="btn g" id="lfUp" style="width:100%" ${S.gold<nx.price?'disabled':''}>${h?'🏗️ '+nx.dat+' yükselt':'🔨 '+nx.n+' inşa et'} · ${fmt(nx.price)} 🪙</button>
+    <p style="font-size:11.5px;color:#a99a7a">${nx.n}: depo ${nx.dep} yer · dinlenme EXP +%${nx.rest}${h+1===3?' · enerji %25 daha yavaş azalır':''}</p>`;
+  else html+=`<p style="font-size:12px;color:#c9f27a">👑 Konak sahibisin: enerjin %25 daha yavaş azalır.</p>`;
+  lifeP(h?`🏠 ${H.my} · ${p.where}`:`🪧 Arsan · ${p.where}`,html);
+  if($('lfSleep'))$('lfSleep').onclick=()=>sleepNow(H.rest,15,H.loc+' uyuyorsun…');
+  if($('lfDep'))$('lfDep').onclick=()=>openDepot();
+  if($('lfUp'))$('lfUp').onclick=()=>{if(S.gold<nx.price)return;S.gold-=nx.price;S.house=h+1;save();hud();closeLifeP();$('fade').classList.add('on');tone(160,.3,'square',.05);
+    setTimeout(()=>{refreshPlots();setTimeout(()=>{$('fade').classList.remove('on');ring(pl.pos,0xffd77a,7,.9);sparks({x:p.x,z:p.z},0xc9a35c,30,2.5);
+      toast(`🏗️ Ustalar işini bitirdi! ${nx.my} hazır 🏠`,'#ffd77a');tone(523,.15);setTimeout(()=>tone(659,.15),120);setTimeout(()=>tone(988,.35),240);},300);},900);};}
+function depCell(it,i,from){return it?`<div class="slot cell" data-${from}="${i}" style="border-color:${TIERC[it.t]}">${kE(it.k)}${it.p?`<b>+${it.p}</b>`:''}${(it.b||[]).length?`<i class="bd">${'✦'.repeat(it.b.length)}</i>`:''}</div>`:'<div class="slot cell empty"></div>';}
+function openDepot(){const cap=HOUSES[S.house|0].dep;
+  lifeP(`📦 Depo · ${S.depot.length}/${cap}`,`<p style="font-size:12px;color:#a99a7a;margin:0">Bir eşyaya dokun, diğer tarafa geçsin.</p>
+    <p style="margin:6px 0 0;font-weight:800">📦 Depo</p><div class="grid" style="grid-template-columns:repeat(9,1fr)">${Array.from({length:cap},(_,i)=>depCell(S.depot[i],i,'d')).join('')}</div>
+    <p style="margin:6px 0 0;font-weight:800">🎒 Çanta · ${S.inv.length}/${INV}</p><div class="grid" style="grid-template-columns:repeat(9,1fr)">${Array.from({length:INV},(_,i)=>depCell(S.inv[i],i,'b')).join('')}</div>
+    <button class="btn g" id="lfBack" style="width:100%">⬅️ Geri</button>`);
+  $('lfBody').querySelectorAll('[data-d]').forEach(c=>c.onclick=()=>{if(S.inv.length>=INV){toast('🎒 Çanta dolu!','#ff8a7a');return;}S.inv.push(S.depot.splice(+c.dataset.d,1)[0]);save();openDepot();tone(660,.06);});
+  $('lfBody').querySelectorAll('[data-b]').forEach(c=>c.onclick=()=>{if(S.depot.length>=cap){toast('📦 Depo dolu!','#ff8a7a');return;}S.depot.push(S.inv.splice(+c.dataset.b,1)[0]);save();openDepot();tone(520,.06);});
+  $('lfBack').onclick=()=>openHome(plotOf());}
+// go home
+let homeCd=0;
+function goHome(){const p=plotOf();if(!p){toast('🏘️ Önce Emlakçı\'dan bir arsa al','#ff8a7a');return;}
+  if(anyBossFight()){toast('⚔️ Savaşın ortasında eve dönemezsin!','#ff8a7a');return;}
+  if(Date.now()<homeCd){toast(`⏳ ${Math.ceil((homeCd-Date.now())/1000)} sn sonra tekrar dene`,'#ff8a7a');return;}
+  homeCd=Date.now()+60000;$('setP').classList.remove('on');if(inDungeon)exitDungeon();
+  $('fade').classList.add('on');tone(330,.4,'sine',.06,660);
+  setTimeout(()=>{pl.pos.set(p.x+p.fx*6.6,0,p.z+p.fz*6.6);pl.dash=0;pl.leap=null;camera.position.copy(pl.pos).add(camOff);toast('🏠 Evine döndün','#ffe7b0');setTimeout(()=>$('fade').classList.remove('on'),200);},600);}
+$('goHome').onclick=goHome;
+refreshPlots();
 // ---------------- player logic ----------------
 function hud(){const mh=maxHp();$('lvl').textContent='Sv.'+S.lvl;$('hpb').querySelector('i').style.width=(pl.hp/mh*100)+'%';$('hpb').querySelector('span').textContent=Math.ceil(pl.hp)+' / '+mh;
-  $('xpb').querySelector('i').style.width=(S.lvl>=MAXLVL?100:S.exp/expNeed(S.lvl)*100)+'%';$('gold').textContent='🪙 '+S.gold.toLocaleString('tr-TR');$('potN').textContent=S.pots;}
-function gainExp(e){e=Math.round(e*(1+petB('exp')/100));S.exp+=e;floatTxt(pl.pos,`+${e} EXP`,'#c9f27a',13);
+  $('xpb').querySelector('i').style.width=(S.lvl>=MAXLVL?100:S.exp/expNeed(S.lvl)*100)+'%';$('gold').textContent='🪙 '+S.gold.toLocaleString('tr-TR');$('potN').textContent=S.pots;hudLife();}
+function gainExp(e){e=Math.round(e*(1+petB('exp')/100)*restMul());S.exp+=e;floatTxt(pl.pos,`+${e} EXP`,'#c9f27a',13);
   if(S.lvl>=MAXLVL)S.exp=0;
   while(S.lvl<MAXLVL&&S.exp>=expNeed(S.lvl)){S.exp-=expNeed(S.lvl);S.lvl++;S.sp=(S.sp||0)+1;setTimeout(()=>questEv('level'),0);renderSkillBtns();pl.hp=maxHp();ring(pl.pos,0xffd77a,7,.9);sparks(pl.pos,0xffd77a,20,1.5);
     toast(`✨ SEVİYE ATLADIN! Seviye ${S.lvl} · ⭐ +1 beceri puanı`,'#ffd77a');if(S.lvl===SK.roar.req||S.lvl===SK.quake.req)toast(`🔓 Yeni beceri açıldı! ⭐ Beceriler'den öğren`,'#ffb040');tone(523,.2);setTimeout(()=>tone(659,.2),130);setTimeout(()=>tone(988,.45),260);}
@@ -1707,7 +1875,7 @@ function drawBig(){if(regionOf(pl.pos.x)===2){drawBig2();return;}const W=840,R=4
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.ov').classList.remove('on'));
 
 // ---------------- panels ----------------
-function openPanel(id){if(id==='quest'){openQuest();return;}if(id==='dexit'){exitDungeon('Mağaradan çıktın');return;}if(id==='stable'){openStable();return;}if(id==='travel'){openTravel();return;}$(id).classList.add('on');if(id==='ench'){$('enRes').textContent='';renderEnch();}if(id==='smith'){$('upRes').textContent='';refreshSmith();}if(id==='shop')$('shopInfo').textContent=`Altının: ${S.gold} · İksir: ${S.pots} · Kağıt: ${S.scrolls}`;tone(440,.1);}
+function openPanel(id){if(id==='inn'||id==='estate'||id==='plot'||id==='home'){openLife(id);return;}if(id==='quest'){openQuest();return;}if(id==='dexit'){exitDungeon('Mağaradan çıktın');return;}if(id==='stable'){openStable();return;}if(id==='travel'){openTravel();return;}$(id).classList.add('on');if(id==='ench'){$('enRes').textContent='';renderEnch();}if(id==='smith'){$('upRes').textContent='';refreshSmith();}if(id==='shop')$('shopInfo').textContent=`Altının: ${S.gold} · İksir: ${S.pots} · Kağıt: ${S.scrolls}`;tone(440,.1);}
 let smSel='weapon';
 const statTxt=s=>[s.atk!=null?`⚔️ Saldırı ${s.atk}`:'',s.def!=null?`🛡️ Savunma ${s.def}`:'',s.hp!=null?`❤️ Can +${s.hp}`:'',s.spd!=null?`👟 Hız +${s.spd.toFixed(1)}`:''].filter(Boolean).join(' · ');
 function slotHTML(it,k,sel){return `<div class="slot${sel?' sel':''}" data-slot="${k}" style="border-color:${it?TIERC[it.t]:'#5a4a30'}">${it?kE(k):`<span style="opacity:.3">${kE(k)}</span>`}${it&&it.p?`<b>+${it.p}</b>`:''}<small>${kN(k)}</small></div>`;}
@@ -1853,7 +2021,7 @@ $('bPot').querySelector('.cd').style.transform=`scaleY(${pl.potT})`;
     if(pl.leap){leapTick(dt);}
     else if(pl.dash>0){pl.dash-=dt;pl.pos.addScaledVector(pl.dashDir,28*dt);sparks(pl.pos,pl.dashCol||0xbfe3ff,2,1);
       for(const m of targets()){if(m.dead||pl.hitSet.has(m))continue;const p=posOf(m);if(Math.hypot(p.x-pl.pos.x,p.z-pl.pos.z)<(m.p?2.2:3)){pl.hitSet.add(m);damage(m,pl.dashMult||2.2);}}}
-    else if(ml>.15){const sp=(6+TOT.spd)*(1+TOT.mspd/100+(pl.buffT>0?pl.buffSpd/100:0)+mountSpd())*(pl.slowT>0?.45:1)*Math.min(1,ml);pl.pos.x+=mx/ml*sp*dt;pl.pos.z+=mz/ml*sp*dt;pl.face=Math.atan2(mx,mz);moving=true;}
+    else if(ml>.15){const sp=(6+TOT.spd)*(1+TOT.mspd/100+(pl.buffT>0?pl.buffSpd/100:0)+mountSpd())*(pl.slowT>0?.45:1)*fatigue()*Math.min(1,ml);pl.pos.x+=mx/ml*sp*dt;pl.pos.z+=mz/ml*sp*dt;pl.face=Math.atan2(mx,mz);moving=true;}
     else if(atkHeld){const e=nearestEnemy(S.cls===2?12:9);if(e){const ep=posOf(e),dx=ep.x-pl.pos.x,dz=ep.z-pl.pos.z,d=Math.hypot(dx,dz)-(e.p?0:1.2);
         if(d>CLS[S.cls||0].range-.4){pl.pos.x+=dx/Math.hypot(dx,dz)*6*dt;pl.pos.z+=dz/Math.hypot(dx,dz)*6*dt;pl.face=Math.atan2(dx,dz);moving=true;}else attack();}else attack();}
     pushOut(pl.pos,.45);
@@ -1899,7 +2067,7 @@ $('bPot').querySelector('.cd').style.transform=`scaleY(${pl.potT})`;
   for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.t+=dt;const k=f.t/f.life;
     if(f.fade){f.m.material.opacity=1-k;}else if(f.spike){f.m.position.y=k<.25?-.6+k/.25*1.0:k>.75?.4-(k-.75)/.25*1.2:.4;}else if(f.up){f.m.position.addScaledVector(f.v,dt);f.m.material.opacity=1-k;f.m.scale.setScalar((f.s0||1)*(1-k*.6));}else if(f.sp){f.v.y-=14*dt;f.m.position.addScaledVector(f.v,dt);f.m.rotation.x+=dt*8;}else{f.m.scale.setScalar(1+k*f.max);f.m.material.opacity=1-k;}
     if(k>=1){relP(f.m);fx.splice(i,1);}}
-  if((miniT%15)===0)dayUpdate();updBoss(dt);updTeles(dt);dungeonTick(dt);regionTick(dt);for(const b of BOSS2)updB(b,dt);if(shakeT>0)shakeT-=dt;
+  if((miniT%15)===0)dayUpdate();updBoss(dt);updTeles(dt);dungeonTick(dt);regionTick(dt);lifeTick(dt);for(const b of BOSS2)updB(b,dt);if(shakeT>0)shakeT-=dt;
   $('qBox').style.visibility=$('bossBar').style.display==='block'?'hidden':'visible';
   // camera & sun
   swordFx(dt);const portrait=innerWidth<innerHeight,bz=(bossZ+=((anyBossFight()?(BOSS2.some(b=>b.state==='fight'&&b.rad>2)?1.6:1.35):1)*(riding?1.25:1)-bossZ)*Math.min(1,dt*2)),D=(portrait?15:12.5)*camZoom*bz,H=(portrait?18:15)*camPitch*camZoom*bz+.6*(1-camZoom);camOff.set(Math.sin(camYaw)*D,H,Math.cos(camYaw)*D);
