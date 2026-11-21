@@ -338,6 +338,509 @@ input,textarea{font-size:16px!important}
 <script>
 ( function () {
 
+	class SkeletonUtils {
+
+		static retarget( target, source, options = {} ) {
+
+			const pos = new THREE.Vector3(),
+				quat = new THREE.Quaternion(),
+				scale = new THREE.Vector3(),
+				bindBoneMatrix = new THREE.Matrix4(),
+				relativeMatrix = new THREE.Matrix4(),
+				globalMatrix = new THREE.Matrix4();
+			options.preserveMatrix = options.preserveMatrix !== undefined ? options.preserveMatrix : true;
+			options.preservePosition = options.preservePosition !== undefined ? options.preservePosition : true;
+			options.preserveHipPosition = options.preserveHipPosition !== undefined ? options.preserveHipPosition : false;
+			options.useTargetMatrix = options.useTargetMatrix !== undefined ? options.useTargetMatrix : false;
+			options.hip = options.hip !== undefined ? options.hip : 'hip';
+			options.names = options.names || {};
+			const sourceBones = source.isObject3D ? source.skeleton.bones : this.getBones( source ),
+				bones = target.isObject3D ? target.skeleton.bones : this.getBones( target );
+			let bindBones, bone, name, boneTo, bonesPosition; // reset bones
+
+			if ( target.isObject3D ) {
+
+				target.skeleton.pose();
+
+			} else {
+
+				options.useTargetMatrix = true;
+				options.preserveMatrix = false;
+
+			}
+
+			if ( options.preservePosition ) {
+
+				bonesPosition = [];
+
+				for ( let i = 0; i < bones.length; i ++ ) {
+
+					bonesPosition.push( bones[ i ].position.clone() );
+
+				}
+
+			}
+
+			if ( options.preserveMatrix ) {
+
+				// reset matrix
+				target.updateMatrixWorld();
+				target.matrixWorld.identity(); // reset children matrix
+
+				for ( let i = 0; i < target.children.length; ++ i ) {
+
+					target.children[ i ].updateMatrixWorld( true );
+
+				}
+
+			}
+
+			if ( options.offsets ) {
+
+				bindBones = [];
+
+				for ( let i = 0; i < bones.length; ++ i ) {
+
+					bone = bones[ i ];
+					name = options.names[ bone.name ] || bone.name;
+
+					if ( options.offsets && options.offsets[ name ] ) {
+
+						bone.matrix.multiply( options.offsets[ name ] );
+						bone.matrix.decompose( bone.position, bone.quaternion, bone.scale );
+						bone.updateMatrixWorld();
+
+					}
+
+					bindBones.push( bone.matrixWorld.clone() );
+
+				}
+
+			}
+
+			for ( let i = 0; i < bones.length; ++ i ) {
+
+				bone = bones[ i ];
+				name = options.names[ bone.name ] || bone.name;
+				boneTo = this.getBoneByName( name, sourceBones );
+				globalMatrix.copy( bone.matrixWorld );
+
+				if ( boneTo ) {
+
+					boneTo.updateMatrixWorld();
+
+					if ( options.useTargetMatrix ) {
+
+						relativeMatrix.copy( boneTo.matrixWorld );
+
+					} else {
+
+						relativeMatrix.copy( target.matrixWorld ).invert();
+						relativeMatrix.multiply( boneTo.matrixWorld );
+
+					} // ignore scale to extract rotation
+
+
+					scale.setFromMatrixScale( relativeMatrix );
+					relativeMatrix.scale( scale.set( 1 / scale.x, 1 / scale.y, 1 / scale.z ) ); // apply to global matrix
+
+					globalMatrix.makeRotationFromQuaternion( quat.setFromRotationMatrix( relativeMatrix ) );
+
+					if ( target.isObject3D ) {
+
+						const boneIndex = bones.indexOf( bone ),
+							wBindMatrix = bindBones ? bindBones[ boneIndex ] : bindBoneMatrix.copy( target.skeleton.boneInverses[ boneIndex ] ).invert();
+						globalMatrix.multiply( wBindMatrix );
+
+					}
+
+					globalMatrix.copyPosition( relativeMatrix );
+
+				}
+
+				if ( bone.parent && bone.parent.isBone ) {
+
+					bone.matrix.copy( bone.parent.matrixWorld ).invert();
+					bone.matrix.multiply( globalMatrix );
+
+				} else {
+
+					bone.matrix.copy( globalMatrix );
+
+				}
+
+				if ( options.preserveHipPosition && name === options.hip ) {
+
+					bone.matrix.setPosition( pos.set( 0, bone.position.y, 0 ) );
+
+				}
+
+				bone.matrix.decompose( bone.position, bone.quaternion, bone.scale );
+				bone.updateMatrixWorld();
+
+			}
+
+			if ( options.preservePosition ) {
+
+				for ( let i = 0; i < bones.length; ++ i ) {
+
+					bone = bones[ i ];
+					name = options.names[ bone.name ] || bone.name;
+
+					if ( name !== options.hip ) {
+
+						bone.position.copy( bonesPosition[ i ] );
+
+					}
+
+				}
+
+			}
+
+			if ( options.preserveMatrix ) {
+
+				// restore matrix
+				target.updateMatrixWorld( true );
+
+			}
+
+		}
+
+		static retargetClip( target, source, clip, options = {} ) {
+
+			options.useFirstFramePosition = options.useFirstFramePosition !== undefined ? options.useFirstFramePosition : false;
+			options.fps = options.fps !== undefined ? options.fps : 30;
+			options.names = options.names || [];
+
+			if ( ! source.isObject3D ) {
+
+				source = this.getHelperFromSkeleton( source );
+
+			}
+
+			const numFrames = Math.round( clip.duration * ( options.fps / 1000 ) * 1000 ),
+				delta = 1 / options.fps,
+				convertedTracks = [],
+				mixer = new THREE.AnimationMixer( source ),
+				bones = this.getBones( target.skeleton ),
+				boneDatas = [];
+			let positionOffset, bone, boneTo, boneData, name;
+			mixer.clipAction( clip ).play();
+			mixer.update( 0 );
+			source.updateMatrixWorld();
+
+			for ( let i = 0; i < numFrames; ++ i ) {
+
+				const time = i * delta;
+				this.retarget( target, source, options );
+
+				for ( let j = 0; j < bones.length; ++ j ) {
+
+					name = options.names[ bones[ j ].name ] || bones[ j ].name;
+					boneTo = this.getBoneByName( name, source.skeleton );
+
+					if ( boneTo ) {
+
+						bone = bones[ j ];
+						boneData = boneDatas[ j ] = boneDatas[ j ] || {
+							bone: bone
+						};
+
+						if ( options.hip === name ) {
+
+							if ( ! boneData.pos ) {
+
+								boneData.pos = {
+									times: new Float32Array( numFrames ),
+									values: new Float32Array( numFrames * 3 )
+								};
+
+							}
+
+							if ( options.useFirstFramePosition ) {
+
+								if ( i === 0 ) {
+
+									positionOffset = bone.position.clone();
+
+								}
+
+								bone.position.sub( positionOffset );
+
+							}
+
+							boneData.pos.times[ i ] = time;
+							bone.position.toArray( boneData.pos.values, i * 3 );
+
+						}
+
+						if ( ! boneData.quat ) {
+
+							boneData.quat = {
+								times: new Float32Array( numFrames ),
+								values: new Float32Array( numFrames * 4 )
+							};
+
+						}
+
+						boneData.quat.times[ i ] = time;
+						bone.quaternion.toArray( boneData.quat.values, i * 4 );
+
+					}
+
+				}
+
+				mixer.update( delta );
+				source.updateMatrixWorld();
+
+			}
+
+			for ( let i = 0; i < boneDatas.length; ++ i ) {
+
+				boneData = boneDatas[ i ];
+
+				if ( boneData ) {
+
+					if ( boneData.pos ) {
+
+						convertedTracks.push( new THREE.VectorKeyframeTrack( '.bones[' + boneData.bone.name + '].position', boneData.pos.times, boneData.pos.values ) );
+
+					}
+
+					convertedTracks.push( new THREE.QuaternionKeyframeTrack( '.bones[' + boneData.bone.name + '].quaternion', boneData.quat.times, boneData.quat.values ) );
+
+				}
+
+			}
+
+			mixer.uncacheAction( clip );
+			return new THREE.AnimationClip( clip.name, - 1, convertedTracks );
+
+		}
+
+		static getHelperFromSkeleton( skeleton ) {
+
+			const source = new THREE.SkeletonHelper( skeleton.bones[ 0 ] );
+			source.skeleton = skeleton;
+			return source;
+
+		}
+
+		static getSkeletonOffsets( target, source, options = {} ) {
+
+			const targetParentPos = new THREE.Vector3(),
+				targetPos = new THREE.Vector3(),
+				sourceParentPos = new THREE.Vector3(),
+				sourcePos = new THREE.Vector3(),
+				targetDir = new THREE.Vector2(),
+				sourceDir = new THREE.Vector2();
+			options.hip = options.hip !== undefined ? options.hip : 'hip';
+			options.names = options.names || {};
+
+			if ( ! source.isObject3D ) {
+
+				source = this.getHelperFromSkeleton( source );
+
+			}
+
+			const nameKeys = Object.keys( options.names ),
+				nameValues = Object.values( options.names ),
+				sourceBones = source.isObject3D ? source.skeleton.bones : this.getBones( source ),
+				bones = target.isObject3D ? target.skeleton.bones : this.getBones( target ),
+				offsets = [];
+			let bone, boneTo, name, i;
+			target.skeleton.pose();
+
+			for ( i = 0; i < bones.length; ++ i ) {
+
+				bone = bones[ i ];
+				name = options.names[ bone.name ] || bone.name;
+				boneTo = this.getBoneByName( name, sourceBones );
+
+				if ( boneTo && name !== options.hip ) {
+
+					const boneParent = this.getNearestBone( bone.parent, nameKeys ),
+						boneToParent = this.getNearestBone( boneTo.parent, nameValues );
+					boneParent.updateMatrixWorld();
+					boneToParent.updateMatrixWorld();
+					targetParentPos.setFromMatrixPosition( boneParent.matrixWorld );
+					targetPos.setFromMatrixPosition( bone.matrixWorld );
+					sourceParentPos.setFromMatrixPosition( boneToParent.matrixWorld );
+					sourcePos.setFromMatrixPosition( boneTo.matrixWorld );
+					targetDir.subVectors( new THREE.Vector2( targetPos.x, targetPos.y ), new THREE.Vector2( targetParentPos.x, targetParentPos.y ) ).normalize();
+					sourceDir.subVectors( new THREE.Vector2( sourcePos.x, sourcePos.y ), new THREE.Vector2( sourceParentPos.x, sourceParentPos.y ) ).normalize();
+					const laterialAngle = targetDir.angle() - sourceDir.angle();
+					const offset = new THREE.Matrix4().makeRotationFromEuler( new THREE.Euler( 0, 0, laterialAngle ) );
+					bone.matrix.multiply( offset );
+					bone.matrix.decompose( bone.position, bone.quaternion, bone.scale );
+					bone.updateMatrixWorld();
+					offsets[ name ] = offset;
+
+				}
+
+			}
+
+			return offsets;
+
+		}
+
+		static renameBones( skeleton, names ) {
+
+			const bones = this.getBones( skeleton );
+
+			for ( let i = 0; i < bones.length; ++ i ) {
+
+				const bone = bones[ i ];
+
+				if ( names[ bone.name ] ) {
+
+					bone.name = names[ bone.name ];
+
+				}
+
+			}
+
+			return this;
+
+		}
+
+		static getBones( skeleton ) {
+
+			return Array.isArray( skeleton ) ? skeleton : skeleton.bones;
+
+		}
+
+		static getBoneByName( name, skeleton ) {
+
+			for ( let i = 0, bones = this.getBones( skeleton ); i < bones.length; i ++ ) {
+
+				if ( name === bones[ i ].name ) return bones[ i ];
+
+			}
+
+		}
+
+		static getNearestBone( bone, names ) {
+
+			while ( bone.isBone ) {
+
+				if ( names.indexOf( bone.name ) !== - 1 ) {
+
+					return bone;
+
+				}
+
+				bone = bone.parent;
+
+			}
+
+		}
+
+		static findBoneTrackData( name, tracks ) {
+
+			const regexp = /\[(.*)\]\.(.*)/,
+				result = {
+					name: name
+				};
+
+			for ( let i = 0; i < tracks.length; ++ i ) {
+
+				// 1 is track name
+				// 2 is track type
+				const trackData = regexp.exec( tracks[ i ].name );
+
+				if ( trackData && name === trackData[ 1 ] ) {
+
+					result[ trackData[ 2 ] ] = i;
+
+				}
+
+			}
+
+			return result;
+
+		}
+
+		static getEqualsBonesNames( skeleton, targetSkeleton ) {
+
+			const sourceBones = this.getBones( skeleton ),
+				targetBones = this.getBones( targetSkeleton ),
+				bones = [];
+
+			search: for ( let i = 0; i < sourceBones.length; i ++ ) {
+
+				const boneName = sourceBones[ i ].name;
+
+				for ( let j = 0; j < targetBones.length; j ++ ) {
+
+					if ( boneName === targetBones[ j ].name ) {
+
+						bones.push( boneName );
+						continue search;
+
+					}
+
+				}
+
+			}
+
+			return bones;
+
+		}
+
+		static clone( source ) {
+
+			const sourceLookup = new Map();
+			const cloneLookup = new Map();
+			const clone = source.clone();
+			parallelTraverse( source, clone, function ( sourceNode, clonedNode ) {
+
+				sourceLookup.set( clonedNode, sourceNode );
+				cloneLookup.set( sourceNode, clonedNode );
+
+			} );
+			clone.traverse( function ( node ) {
+
+				if ( ! node.isSkinnedMesh ) return;
+				const clonedMesh = node;
+				const sourceMesh = sourceLookup.get( node );
+				const sourceBones = sourceMesh.skeleton.bones;
+				clonedMesh.skeleton = sourceMesh.skeleton.clone();
+				clonedMesh.bindMatrix.copy( sourceMesh.bindMatrix );
+				clonedMesh.skeleton.bones = sourceBones.map( function ( bone ) {
+
+					return cloneLookup.get( bone );
+
+				} );
+				clonedMesh.bind( clonedMesh.skeleton, clonedMesh.bindMatrix );
+
+			} );
+			return clone;
+
+		}
+
+	}
+
+	function parallelTraverse( a, b, callback ) {
+
+		callback( a, b );
+
+		for ( let i = 0; i < a.children.length; i ++ ) {
+
+			parallelTraverse( a.children[ i ], b.children[ i ], callback );
+
+		}
+
+	}
+
+	THREE.SkeletonUtils = SkeletonUtils;
+
+} )();
+
+</script>
+<script>
+( function () {
+
 	class GLTFLoader extends THREE.Loader {
 
 		constructor( manager ) {
@@ -4364,7 +4867,7 @@ function spawnMob(type,lvl,x,z,home){const t=TYPES[type],p=beast(t);p.g.position
     state:'idle',wT:rand(1,4),tgt:new V3(x,0,z),atkT:0,flash:0,label:mkLabel(`${t.name} <span style="color:#ffd77a">Sv.${lvl}</span>`),dead:false,anim:rand(0,6),pack:null};
   if(isNight){m.max=m.hp=Math.round(m.hp*1.35);m.dmg*=1.3;m.exp=Math.round(m.exp*1.5);m.label.firstChild.innerHTML='🌙 '+m.label.firstChild.innerHTML;}
   mobs.push(m);return m;}
-function killMob(m){m.dead=true;m.label.remove();scene.remove(m.p.g);questEv('kill',m.type);
+function killMob(m){m.dead=true;m.label.remove();if(m.p.mixer)skelDie(m);else scene.remove(m.p.g);questEv('kill',m.type);
   const mul=m.lvl<S.lvl-5?.25:1;gainExp(Math.round(m.exp*mul));const g=Math.round(rand(3,8)*m.lvl*(1+petB('gold')/100));S.gold+=g;floatTxt(m.p.g.position,`+${g} 🪙`,'#ffd77a',14);
   if(Math.random()<.07){S.pots++;toast('🧪 Kırmızı İksir düştü!');}
   if(Math.random()<.04)dropItem(m.lvl,m.p.g.position);
@@ -4389,10 +4892,10 @@ function spawnStone(near,reg){let x,z,d,ok;for(let k=0;k<30;k++){if(reg===2){x=-
   const li=fakeLight();
   scene.add(g);const hp=Math.round(260*(1+.35*(lvl-1)));
   const s={x,z,lvl,g,rock,veins,orb,hp,max:hp,flash:0,next:.8,label:mkLabel(`${reg===2?'Kızıl Kadim Taş':'Kadim Taş'} <span style="color:#ffd77a">Sv.${lvl}</span>`),type:zl.type,pos:g.position,reg:reg||1};
-  stones.push(s);colliders.push(s.col={x,z,r:1.6});}
+  stones.push(s);colliders.push(s.col={x,z,r:1.6});stoneLook(s,reg||1);}
 for(let i=0;i<8;i++)spawnStone(i<3);
 let stoneRespawn=[];
-function breakStone(s){questEv('stone');scene.remove(s.g);s.label.remove();stones.splice(stones.indexOf(s),1);colliders.splice(colliders.indexOf(s.col),1);
+function breakStone(s){questEv('stone');stoneShatter(s);scene.remove(s.g);s.label.remove();stones.splice(stones.indexOf(s),1);colliders.splice(colliders.indexOf(s.col),1);
   sparks(s.pos,0xff3355,26,1.8);sparks(s.pos,0x3d3644,14,1.8);ring(s.pos,0xff3355,6,.7);tone(110,.6,'sawtooth',.12,40);noise(.5,.18,300);
   gainExp(Math.round(70*s.lvl));const g=Math.round(rand(60,120)*s.lvl*(1+petB('gold')/100));S.gold+=g;floatTxt(s.pos,`+${g} 🪙`,'#ffd77a',18);
   toast(`Kadim Taş kırıldı! +${g} altın`,'#ffb0c0');
@@ -4408,7 +4911,7 @@ function breakStone(s){questEv('stone');scene.remove(s.g);s.label.remove();stone
 
 // ---------------- NPCs ----------------
 const npcs=[];
-function npc(name,x,z,rot,cfg,panel){const p=human(cfg);p.g.position.set(x,0,z);p.g.rotation.y=rot;scene.add(p.g);
+function npc(name,x,z,rot,cfg,panel){const p=humanHD(cfg,name);p.g.position.set(x,0,z);p.g.rotation.y=rot;scene.add(p.g);
   const n={name,pos:p.g.position,panel,p,label:mkLabel(name,'npc',false)};npcs.push(n);colliders.push({x,z,r:.8});return n;}
 const smithN=npc('⚒️ Demirci',4.5,-6,-.6,{body:0x4a3a2a,leg:0x2a2a2a,arm:0xd8a880,hair:0x2a1a10,belt:0x7a4a1a},'smith');
 smithN.p.body.material=M(0x6a4a2a);
@@ -5486,7 +5989,7 @@ function actPose(dt,moving){if(!act)return;const lp=$('lifeP');
 // To switch to another pack later: change files / blob ids / bone names / animation names below.
 const CHARMODEL={
   files:['Knight.glb','Rogue_Hooded.glb','Mage.glb','Barbarian.glb'],
-  blob:{'Knight.glb':'905e8e1d67634a6effa3eb3dc5d83874','Rogue_Hooded.glb':'d441c74be1ad8c500f9e7ca507402a05','Mage.glb':'50046084e3d2a66fcc1af1555c0c5b8e','Barbarian.glb':'15738e5486decc13472e9f46c96a2ad3'},
+  blob:{'Knight.glb':'905e8e1d67634a6effa3eb3dc5d83874','Rogue_Hooded.glb':'d441c74be1ad8c500f9e7ca507402a05','Mage.glb':'50046084e3d2a66fcc1af1555c0c5b8e','Barbarian.glb':'15738e5486decc13472e9f46c96a2ad3','Skeleton_Warrior.glb':'9fb4f3328f0283210f6f025bde286256','Skeleton_Mage.glb':'eee55ba3fde16150001ceffe696ed202'},
   handR:'handslot.r',handL:'handslot.l',height:2.15,
   anim:[
     {idle:'Idle',walk:'Walking_A',run:'Running_A',atk:['1H_Melee_Attack_Slice_Diagonal','1H_Melee_Attack_Chop','1H_Melee_Attack_Slice_Horizontal','1H_Melee_Attack_Stab'],
@@ -5557,6 +6060,123 @@ function kmTick(dt,moving,ml){if(!KM){if((S.cls||0)!==kmLoading)kmLoad(S.cls||0)
   else if(pl.spin>0)want=A.sk.spin;
   else if(moving){const sp=Math.min(1,ml);want=sp<.55?A.walk:A.run;ts=sp<.55?1+sp:.8+sp*.4;}
   if(KM.curName!==want)kmPlay(want,false,ts);else if(KM.cur)KM.cur.timeScale=ts;}
+const skTmpV=new V3();
+// ---------------- visual upgrade: NPCs (smooth), stones fx, skeleton enemies ----------------
+function sm(c,o){return new THREE.MeshPhongMaterial(Object.assign({color:c,shininess:12},o||{}));}
+function smesh(geo,c,x,y,z){const m=new THREE.Mesh(geo,typeof c==='number'?sm(c):c);m.position.set(x||0,y||0,z||0);m.castShadow=true;return m;}
+function humanHD(c,name){const g=new THREE.Group(),p={g},R=new THREE.Group();R.scale.setScalar(1.12);g.add(R);name=name||'';
+  const skin=0xe0b08a,cloth=c.body,legC=c.leg,arm=c.arm&&c.arm!==skin?c.arm:c.body,hairC=c.hair||0x3a2410,beltC=c.belt||0x4a3020;
+  const old=/Nine|Muhtar/.test(name),smith=/Demirci/.test(name),capt=/Kaptan/.test(name),seller=/Satıcı/.test(name),inn=/Hancı/.test(name),est=/Emlakçı/.test(name),groom=/Seyis/.test(name),witch=/Büyücü/.test(name);
+  const limb=(r1,r2,len,col)=>{const j=new THREE.Group();j.add(smesh(new THREE.CylinderGeometry(r1,r2,len,10),col,0,-len/2,0));j.add(smesh(new THREE.SphereGeometry(r1*1.02,10,8),col));return j;};
+  for(const s of[-1,1]){const hip=limb(.12,.1,.46,legC);hip.position.set(s*.13,.92,0);const kn=limb(.1,.085,.44,legC);kn.position.y=-.46;hip.add(kn);
+    const boot=smesh(new THREE.SphereGeometry(.11,10,8),0x3a2616,0,-.46,.06);boot.scale.set(1,.7,1.7);kn.add(boot);R.add(hip);if(s<0)p.legL=hip;else p.legR=hip;}
+  const prof=[[0,.62],[.3,.62],[.29,.74],[.27,.92],[.25,1.1],[.27,1.3],[.3,1.46],[.2,1.58],[.08,1.62]].map(q=>new THREE.Vector2(q[0],q[1]));
+  const tor=smesh(new THREE.LatheGeometry(prof,16),cloth);tor.scale.z=.78;R.add(tor);p.body=tor;
+  const belt=smesh(new THREE.TorusGeometry(.26,.04,6,20),beltC,0,.95,0);belt.rotation.x=Math.PI/2;belt.scale.y=.8;R.add(belt);
+  R.add(smesh(new THREE.CylinderGeometry(.07,.08,.14,8),skin,0,1.66,0));
+  for(const s of[-1,1]){const sh=limb(.075,.065,.36,arm);sh.position.set(s*.33,1.48,0);const el=limb(.065,.055,.33,skin);el.position.y=-.36;sh.add(el);
+    const hand=smesh(new THREE.SphereGeometry(.07,8,6),skin,0,-.35,0);el.add(hand);sh.userData.hand=hand;sh.rotation.z=s*.08;R.add(sh);if(s<0)p.armL=sh;else p.armR=sh;}
+  const head=new THREE.Group();head.position.y=1.86;R.add(head);p.head=head;
+  const hd=smesh(new THREE.SphereGeometry(.19,18,14),skin);hd.scale.set(.92,1.08,1);head.add(hd);
+  for(const s of[-1,1]){head.add(smesh(new THREE.SphereGeometry(.024,8,6),0x1a1410,s*.066,.02,.165));head.add(smesh(new THREE.BoxGeometry(.075,.016,.02),old?0xd8d8d8:hairC,s*.068,.075,.17));
+    const e=smesh(new THREE.SphereGeometry(.04,8,6),skin,s*.175,0,0);e.scale.set(.5,1,.8);head.add(e);}
+  const nose=smesh(new THREE.ConeGeometry(.026,.07,6),skin,0,-.02,.2);nose.rotation.x=Math.PI/2;head.add(nose);
+  const hairM=old?0xdedede:hairC;
+  if(!witch){const h=smesh(new THREE.SphereGeometry(.2,18,12,0,6.3,0,1.7),hairM,0,.02,-.02);h.rotation.x=-.25;h.scale.set(.96,1.06,1.04);head.add(h);}
+  if(smith||capt||/Muhtar/.test(name)){const b=smesh(new THREE.SphereGeometry(.165,14,10,0,6.3,1.6,1.2),hairM,0,0,.02);b.scale.set(.95,1.1,1.05);head.add(b);}
+  if(smith){const ap=smesh(new THREE.BoxGeometry(.5,.8,.04),0x5a3a22,0,1.02,.22);ap.rotation.x=-.06;R.add(ap);
+    const hm=new THREE.Group();hm.add(smesh(new THREE.CylinderGeometry(.025,.025,.5,6),0x6a4a2a,0,-.1,0));hm.add(smesh(new THREE.BoxGeometry(.22,.11,.11),0x6a6a74,0,.15,0));hm.rotation.x=Math.PI/2;hm.position.y=-.06;p.armR.userData.hand.add(hm);}
+  if(inn){R.add(smesh(new THREE.BoxGeometry(.48,.62,.03),0xf0ece0,0,.9,.22));const k=smesh(new THREE.SphereGeometry(.205,14,10,0,6.3,0,1.3),0xc0302a,0,.03,-.01);head.add(k);}
+  if(seller){const y=smesh(new THREE.SphereGeometry(.215,16,12,0,6.3,0,1.85),0xd84a6a,0,.0,-.02);y.scale.set(1,1.05,1.05);head.add(y);
+    for(let i=0;i<10;i++)head.add(smesh(new THREE.SphereGeometry(.018,6,4),0xfff0a0,Math.cos(i*.63)*.2,.05+Math.sin(i*1.3)*.08,Math.sin(i*.63)*.2-.02));}
+  if(capt){const ht=new THREE.Group();ht.add(smesh(new THREE.CylinderGeometry(.24,.26,.06,16),0x1a2440));ht.add(smesh(new THREE.CylinderGeometry(.17,.2,.18,16),0x1a2440,0,.1,0));
+    ht.add(smesh(new THREE.TorusGeometry(.19,.015,6,20),0xc9a35c,0,.06,0).rotateX(Math.PI/2));ht.position.y=.17;head.add(ht);}
+  if(/Muhtar/.test(name)){const cap=smesh(new THREE.SphereGeometry(.21,16,10,0,6.3,0,1.2),0x4a4a3a,0,.04,-.01);head.add(cap);const br=smesh(new THREE.BoxGeometry(.26,.03,.14),0x3a3a2a,0,.1,.18);head.add(br);
+    R.add(smesh(new THREE.BoxGeometry(.46,.55,.06),0x3a3a30,0,1.25,.15));}
+  if(groom){const st=new THREE.Group();st.add(smesh(new THREE.CylinderGeometry(.34,.36,.04,18),0xd8b860));st.add(smesh(new THREE.CylinderGeometry(.17,.2,.16,14),0xd8b860,0,.08,0));
+    st.add(smesh(new THREE.CylinderGeometry(.205,.205,.04,14),0x8a2a1a,0,.04,0));st.position.y=.17;head.add(st);}
+  if(est){const ht=new THREE.Group();ht.add(smesh(new THREE.CylinderGeometry(.27,.27,.03,18),0x2a2a30));ht.add(smesh(new THREE.CylinderGeometry(.16,.18,.17,14),0x2a2a30,0,.09,0));ht.position.y=.17;head.add(ht);
+    R.add(smesh(new THREE.BoxGeometry(.05,.3,.02),0x9a2a2a,0,1.35,.24));}
+  if(witch){const hood=smesh(new THREE.SphereGeometry(.24,16,12,0,6.3,0,1.9),cloth,0,.02,-.03);hood.scale.set(1,1.1,1.1);head.add(hood);
+    const sh=smesh(new THREE.ConeGeometry(.42,.5,16,1,true),0x6a3a8a,0,1.44,0);R.add(sh);R.rotation.x=.12;head.rotation.x=-.15;
+    const stick=new THREE.Group();stick.add(smesh(new THREE.CylinderGeometry(.025,.03,1.5,6),0x5a3a1a,0,.1,0));const orb=new THREE.Mesh(new THREE.SphereGeometry(.07,10,8),new THREE.MeshBasicMaterial({color:0xc77dff}));orb.position.y=.88;stick.add(orb);
+    stick.position.set(0,-.05,.05);p.armL.userData.hand.add(stick);p.armL.rotation.x=-.5;}
+  g.traverse(o=>{if(o.isMesh)o.receiveShadow=false;});return p;}
+// ---- stones ----
+function stoneGeo(seed){const g=new THREE.IcosahedronGeometry(1,1),p=g.attributes.position;
+  for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),h=Math.sin(x*12.9+y*78.2+z*37.7+seed)*43758.5;const f=1+((h-Math.floor(h))-.5)*.32;p.setXYZ(i,x*f,y*f,z*f);}g.computeVertexNormals();return g;}
+var glowTexC=null;function glowT(){if(glowTexC)return glowTexC;const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),gr=x.createRadialGradient(64,64,0,64,64,64);
+  gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(.3,'rgba(255,255,255,.4)');gr.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=gr;x.fillRect(0,0,128,128);return glowTexC=new THREE.CanvasTexture(c);}
+function stoneLook(s,reg){const g=s.g,col=reg===2?0xffb020:0xff2a55;g.remove(s.rock);g.remove(s.veins);
+  const rock=new THREE.Mesh(stoneGeo(s.x),sm(reg===2?0x4a2a26:0x2c2834,{shininess:50,specular:0x443355,flatShading:true}));rock.scale.set(1.15,2.15,1.15);rock.position.y=1.95;rock.castShadow=true;g.add(rock);s.rock=rock;
+  const runeM=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.8});s.veins={material:runeM};
+  for(let i=0;i<9;i++){const a=i*.7+rand(-.2,.2),y=.9+(i%4)*.75,r=new THREE.Mesh(new THREE.BoxGeometry(.07,rand(.35,.8),.05),runeM);r.position.set(Math.cos(a)*1.05,0,Math.sin(a)*1.05);r.rotation.y=-a+Math.PI/2;r.rotation.z=rand(-.4,.4);
+    const holder=new THREE.Group();holder.position.y=y;holder.add(r);g.add(holder);if(i%3===0){const r2=r.clone();r2.rotation.z+=1.2;r2.scale.y=.5;holder.add(r2);}}
+  const gl=new THREE.Sprite(new THREE.SpriteMaterial({map:glowT(),color:col,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.55}));gl.scale.set(5.5,7,1);gl.position.y=2.1;g.add(gl);s.glow=gl;
+  const ring=new THREE.Mesh(new THREE.RingGeometry(1.3,2.6,32),new THREE.MeshBasicMaterial({map:glowT(),color:col,transparent:true,opacity:.35,blending:THREE.AdditiveBlending,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.y=.05;g.add(ring);s.ground=ring;
+  const N=26,pg=new THREE.BufferGeometry(),pp=new Float32Array(N*3);for(let i=0;i<N;i++){pp[i*3]=rand(-1.4,1.4);pp[i*3+1]=rand(0,5);pp[i*3+2]=rand(-1.4,1.4);}
+  pg.setAttribute('position',new THREE.BufferAttribute(pp,3));const pts=new THREE.Points(pg,new THREE.PointsMaterial({color:col,size:.16,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));g.add(pts);s.pts=pts;}
+function stoneTick(s,dt){const dmg=1-s.hp/s.max,pu=.5+Math.sin(time*2.4+s.x)*.15+dmg*.35;if(s.glow){s.glow.material.opacity=pu*.9;s.glow.scale.set(5+dmg*2.5,6.5+dmg*3,1);}
+  if(s.ground)s.ground.material.opacity=.25+pu*.25;s.veins.material.opacity=Math.min(1,.55+Math.sin(time*3+s.z)*.25+dmg*.5);
+  if(s.pts){const a=s.pts.geometry.attributes.position;for(let i=0;i<a.count;i++){let y=a.getY(i)+dt*(.6+dmg*1.4);if(y>5){y=0;}a.setY(i,y);}a.needsUpdate=true;}}
+const debris=[];
+function stoneShatter(s){const col=s.reg===2?0x4a2a26:0x2c2834;for(let i=0;i<14;i++){const m=new THREE.Mesh(stoneGeo(i*7.3),sm(col,{flatShading:true}));m.scale.setScalar(rand(.18,.42));
+    m.position.set(s.x+rand(-.6,.6),rand(.8,3.2),s.z+rand(-.6,.6));m.castShadow=true;scene.add(m);const a=Math.random()*6.28,sp=rand(3,7);debris.push({m,v:new V3(Math.cos(a)*sp,rand(3,8),Math.sin(a)*sp),t:0,r:new V3(rand(-8,8),rand(-8,8),0)});}}
+function debrisTick(dt){for(let i=debris.length-1;i>=0;i--){const d=debris[i];d.t+=dt;if(d.m.position.y>.15){d.v.y-=18*dt;d.m.position.addScaledVector(d.v,dt);d.m.rotation.x+=d.r.x*dt;d.m.rotation.y+=d.r.y*dt;if(d.m.position.y<.15){d.m.position.y=.15;d.v.multiplyScalar(.3);}}
+    if(d.t>2.2)d.m.position.y-=dt*.6;if(d.t>3.2){scene.remove(d.m);d.m.geometry.dispose();debris.splice(i,1);}}}
+// ---- skeleton enemies (KayKit Skeletons, CC0) ----
+const SKEL={files:{skwar:'Skeleton_Warrior.glb',skmage:'Skeleton_Mage.glb'},blob:{},src:{},loading:false,ready:false};
+TYPES.skwar={name:'İskelet Savaşçı',hp:130,dmg:13,exp:40,spd:4.3,model:()=>skelModel('skwar'),skel:1,atk:'1H_Melee_Attack_Chop'};
+TYPES.skmage={name:'İskelet Büyücü',hp:95,dmg:15,exp:44,spd:3.6,range:7,model:()=>skelModel('skmage'),skel:1,atk:'Spellcast_Shoot'};
+function skelLoad(){if(SKEL.loading||typeof THREE.GLTFLoader!=='function')return;SKEL.loading=true;const L=new THREE.GLTFLoader();let n=0;const keys=Object.keys(SKEL.files);
+  keys.forEach(k=>{const f=SKEL.files[k],urls=kmUrl(f);
+    const go=i=>L.load(urls[i],g=>{const r=g.scene;r.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(r);const s=2.05/Math.max(.1,b.max.y-b.min.y);
+      r.traverse(o=>{if(o.isMesh){const old=o.material;const mt=new THREE.MeshPhongMaterial({map:old.map||null,shininess:15,skinning:!!o.isSkinnedMesh});if(mt.map)mt.map.encoding=THREE.LinearEncoding;o.material=mt;}});
+      const clips={};for(const a of g.animations)clips[a.name]=a;SKEL.src[k]={scene:r,s,clips};if(++n===keys.length)SKEL.ready=true;},null,()=>{if(i+1<urls.length)go(i+1);});go(0);});}
+function skelModel(k){const src=SKEL.src[k],g=new THREE.Group(),inner=THREE.SkeletonUtils.clone(src.scene);inner.scale.setScalar(src.s);g.add(inner);
+  inner.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;}});const body=new THREE.Group();g.add(body);
+  let hand=null;inner.traverse(o=>{if(o.name.replace(/[^a-z0-9]/gi,'').toLowerCase()==='handslotr')hand=o;});
+  if(hand){const w=new THREE.Group();w.scale.setScalar(.7/src.s);hand.add(w);
+    if(k==='skwar'){w.add(smesh(new THREE.BoxGeometry(.09,1.0,.025),0x8a7a6a,0,.62,0));w.add(smesh(new THREE.BoxGeometry(.32,.05,.06),0x5a4a3a,0,.1,0));w.add(smesh(new THREE.CylinderGeometry(.03,.03,.2,6),0x3a2a1a,0,0,0));}
+    else{w.add(smesh(new THREE.CylinderGeometry(.03,.035,1.6,6),0x3a2a1a,0,.3,0));const o=new THREE.Mesh(new THREE.OctahedronGeometry(.12,0),new THREE.MeshBasicMaterial({color:0x9a5aff}));o.position.y=1.15;w.add(o);}}
+  const mixer=new THREE.AnimationMixer(inner);return {g,legs:[],body,mixer,clips:src.clips,cur:null,curN:''};}
+function skPlay(p,n,once,ts){const c=p.clips[n];if(!c)return 0;const a=p.mixer.clipAction(c);a.reset();a.setLoop(once?THREE.LoopOnce:THREE.LoopRepeat,Infinity);a.clampWhenFinished=!!once;a.timeScale=ts||1;
+  if(p.cur&&p.cur!==a)a.crossFadeFrom(p.cur,.15,false);a.play();p.cur=a;p.curN=n;return c.duration/(ts||1);}
+const skBolts=[];
+function skelTick(m,mv,dt){const p=m.p;p.mixer.update(dt);if(p.lock>0){p.lock-=dt;return;}
+  if(m.lunge>.15&&!m.didAtk){m.didAtk=1;p.lock=skPlay(p,m.t.atk,true,1.4)*.8;if(m.t.range)skBolt(m);return;}if(m.lunge<=0)m.didAtk=0;
+  const want=mv===2?'Running_A':mv===1?'Walking_D_Skeletons':(m.state==='chase'?'Idle_Combat':'Idle');if(p.curN!==want)skPlay(p,want,false,mv===2?1.1:1);}
+function skBolt(m){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:glowT(),color:0xa060ff,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));s.scale.setScalar(1);
+  s.position.copy(m.p.g.position);s.position.y+=1.5;scene.add(s);skBolts.push({s,t:0});}
+const corpses=[];
+function skelDie(m){const p=m.p;scene.add(p.g);p.lock=0;skPlay(p,'Death_C_Skeletons',true,1.1);corpses.push({p,t:0});}
+// graveyards
+const GRAVES=[{x:-34,z:34},{x:30,z:52},{x:-70,z:10}];
+GRAVES.forEach((gv,gi)=>{const g=new THREE.Group();g.position.set(gv.x,0,gv.z);
+  const dirt=new THREE.Mesh(new THREE.CircleGeometry(7.5,24),new THREE.MeshLambertMaterial({color:0x4a4234}));dirt.rotation.x=-Math.PI/2;dirt.position.y=.03;g.add(dirt);
+  for(let i=0;i<7;i++){const a=i/7*6.28+gi,r=rand(2.5,5.5),x=Math.cos(a)*r,z=Math.sin(a)*r,ts=new THREE.Group();ts.position.set(x,0,z);ts.rotation.set(rand(-.15,.15),rand(-.4,.4),rand(-.12,.12));
+    if(i%3===0){ts.add(smesh(new THREE.BoxGeometry(.16,1.3,.14),0x7a7a74,0,.65,0));ts.add(smesh(new THREE.BoxGeometry(.7,.16,.14),0x7a7a74,0,.95,0));}
+    else{ts.add(smesh(new THREE.BoxGeometry(.7,.9,.18),0x6e6e68,0,.45,0));ts.add(smesh(new THREE.CylinderGeometry(.35,.35,.18,12,1,false,0,Math.PI),0x6e6e68,0,.9,0).rotateX(Math.PI/2));}
+    const mound=smesh(new THREE.SphereGeometry(.6,10,6,0,6.3,0,1.2),0x3a3224,0,-.25,-.9);mound.scale.set(.9,.5,1.6);ts.add(mound);g.add(ts);colliders.push({x:gv.x+x,z:gv.z+z,r:.45});}
+  const tr=new THREE.Group();tr.add(smesh(new THREE.CylinderGeometry(.12,.22,3,6),0x2a2018,0,1.5,0));for(let k=0;k<4;k++){const b=smesh(new THREE.CylinderGeometry(.04,.08,1.4,5),0x2a2018,0,0,0);b.position.set(Math.cos(k*1.6)*.4,2.4+k*.2,Math.sin(k*1.6)*.4);b.rotation.set(Math.sin(k*1.6)*.9,0,-Math.cos(k*1.6)*.9);tr.add(b);}
+  tr.position.set(0,0,0);g.add(tr);colliders.push({x:gv.x,z:gv.z,r:.4});
+  const mist=new THREE.Sprite(new THREE.SpriteMaterial({map:glowT(),color:0x9ab0c0,transparent:true,opacity:.0,depthWrite:false}));mist.scale.set(16,4,1);mist.position.y=.8;g.add(mist);gv.mist=mist;
+  const sg=new THREE.Group();signBoard(sg,'MEZARLIK','Gece tehlikeli!','#3a3a4a',0,0,2.2);const ang=Math.atan2(-gv.x,-gv.z);sg.position.set(Math.sin(ang)*8,0,Math.cos(ang)*8);sg.rotation.y=ang;g.add(sg);
+  scene.add(g);gv.mobs=[];gv.re=0;});
+let gvWasNight=null;
+function graveTick(dt){
+  for(let i=corpses.length-1;i>=0;i--){const c=corpses[i];c.t+=dt;c.p.mixer.update(dt);if(c.t>2.2)c.p.g.position.y-=dt*.8;if(c.t>3.4){scene.remove(c.p.g);corpses.splice(i,1);}}
+  for(let i=skBolts.length-1;i>=0;i--){const b=skBolts[i];b.t+=dt;const k=Math.min(1,b.t/.35);b.s.position.lerp(skTmpV.set(pl.pos.x,1.3,pl.pos.z),k);b.s.material.opacity=1-b.t/.5;if(b.t>.5){scene.remove(b.s);skBolts.splice(i,1);}}
+for(const gv of GRAVES)gv.mist.material.opacity+=((isNight?.35:0)-gv.mist.material.opacity)*Math.min(1,dt);
+  if(isNight&&!SKEL.ready){skelLoad();return;}
+  if(gvWasNight!==isNight){if(gvWasNight&&!isNight){let n=0;for(const gv of GRAVES)for(const m of gv.mobs)if(!m.dead){m.dead=true;m.label.remove();scene.remove(m.p.g);n++;}if(n&&Math.hypot(pl.pos.x+20,pl.pos.z-30)<80)toast('🌅 Şafak söktü, iskeletler toprağa döndü','#ffe7b0');}gvWasNight=isNight;}
+  if(!isNight||!SKEL.ready||inDungeon)return;
+  for(const gv of GRAVES){gv.mobs=gv.mobs.filter(m=>!m.dead);if(gv.mobs.length)continue;if(gv.re>0){gv.re-=dt;continue;}
+    const d=Math.hypot(gv.x,gv.z),lvl=clamp(zoneFor(d).lvl+3,1,40);
+    ['skwar','skwar','skmage'].forEach((k,i)=>{const a=i*2.1+rand(-.4,.4),x=gv.x+Math.cos(a)*3,z=gv.z+Math.sin(a)*3,m=spawnMob(k,lvl+(i===2?1:0),x,z,{x:gv.x,z:gv.z});
+      m.p.lock=skPlay(m.p,'Skeletons_Awaken_Floor',true,1.3)*.95;m.rise=m.p.lock;gv.mobs.push(m);});
+    gv.re=40;if(Math.hypot(pl.pos.x-gv.x,pl.pos.z-gv.z)<40)toast('💀 Mezarlıkta iskeletler topraktan kalkıyor!','#c8b8ff');}
+}
 // ---------------- player logic ----------------
 function hud(){const mh=maxHp();$('lvl').textContent='Sv.'+S.lvl;$('hpb').querySelector('i').style.width=(pl.hp/mh*100)+'%';$('hpb').querySelector('span').textContent=Math.ceil(pl.hp)+' / '+mh;
   $('xpb').querySelector('i').style.width=(S.lvl>=MAXLVL?100:S.exp/expNeed(S.lvl)*100)+'%';$('gold').textContent='🪙 '+S.gold.toLocaleString('tr-TR');$('potN').textContent=S.pots;hudLife();}
@@ -5896,18 +6516,18 @@ $('bPot').querySelector('.cd').style.transform=`scaleY(${pl.potT})`;
   animHuman(P,pl.walk,moving,pl.atkAnim);classPose(moving);if(pl.spin>0)P.armR.rotation.x=-1.5;actPose(dt,moving);kmTick(dt,moving,ml);rideAnim(moving,dt);petUpdate(dt);armorFx(moving);
   // mobs
   for(const m of mobs){if(m.dead)continue;const g=m.p.g,pos=g.position;m.anim+=dt;
-    const dP=pos.distanceTo(pl.pos);let mv=0;
+    const dP=pos.distanceTo(pl.pos);let mv=0;if(m.rise>0){m.rise-=dt;m.p.mixer&&m.p.mixer.update(dt);g.rotation.y=Math.atan2(pl.pos.x-pos.x,pl.pos.z-pos.z);if(place(m.label,pos,2.4))m.label.querySelector('i').style.width='100%';continue;}
     if(m.stun>0){m.stun-=dt;g.rotation.z=Math.sin(time*20)*.08;}else if(m.state==='idle'){g.rotation.z=0;if(dP<7&&!pl.dead&&!(pl.stealthT>0)){m.state='chase';alertPack(m);}
       m.wT-=dt;if(m.wT<=0){m.wT=rand(2,5);m.tgt.set(m.home.x+rand(-5,5),0,m.home.z+rand(-5,5));}
       const dx=m.tgt.x-pos.x,dz=m.tgt.z-pos.z,d=Math.hypot(dx,dz);if(d>.4){pos.x+=dx/d*1.6*dt;pos.z+=dz/d*1.6*dt;g.rotation.y=Math.atan2(dx,dz);mv=1;}}
     else if(m.state==='chase'){const hd=Math.hypot(pos.x-m.home.x,pos.z-m.home.z);
       if(pl.dead||hd>26||dP>16||pl.stealthT>0){m.state='return';}
       else{const dx=pl.pos.x-pos.x,dz=pl.pos.z-pos.z;g.rotation.y=Math.atan2(dx,dz);
-        if(dP>1.7){const sl=m.slowUntil>time?.5:1;pos.x+=dx/dP*m.t.spd*sl*dt;pos.z+=dz/dP*m.t.spd*sl*dt;mv=2;}
+        if(dP>(m.t.range||1.7)){const sl=m.slowUntil>time?.5:1;pos.x+=dx/dP*m.t.spd*sl*dt;pos.z+=dz/dP*m.t.spd*sl*dt;mv=2;}
         else{m.atkT-=dt;if(m.atkT<=0){m.atkT=1.3;hurtPlayer(m.dmg,m);m.lunge=.2;}}}}
     else{const dx=m.home.x-pos.x,dz=m.home.z-pos.z,d=Math.hypot(dx,dz);if(d<1){m.state='idle';m.hp=m.max;}else{pos.x+=dx/d*m.t.spd*dt;pos.z+=dz/d*m.t.spd*dt;g.rotation.y=Math.atan2(dx,dz);mv=2;m.hp=Math.min(m.max,m.hp+m.max*.3*dt);}}
     for(const o of mobs){if(o===m||o.dead)continue;const op=o.p.g.position,dx=pos.x-op.x,dz=pos.z-op.z,d=Math.hypot(dx,dz);if(d<1.1&&d>1e-3){pos.x+=dx/d*(1.1-d)*.5;pos.z+=dz/d*(1.1-d)*.5;}}
-    pushOut(pos,.5);
+    pushOut(pos,.5);if(m.p.mixer)skelTick(m,mv,dt);
     const ls=mv?Math.sin(m.anim*(mv===2?16:8))*.7:0;m.p.legs.forEach((l,i)=>l.rotation.x=(i%3===0?ls:-ls));
     if(m.lunge>0){m.lunge-=dt;m.p.body.position.z=Math.sin((m.lunge/.2)*Math.PI)*.3;}
     if(m.flash>0){m.flash-=dt;g.scale.setScalar(1+m.flash);}else g.scale.setScalar(1);
@@ -5918,7 +6538,7 @@ $('bPot').querySelector('.cd').style.transform=`scaleY(${pl.potT})`;
   // stones
   for(const s of stones){s.veins.material.opacity=.45+Math.sin(time*3)*.3;s.orb.forEach((o,i)=>{const a=time*1.5+i*2.09;o.position.set(Math.cos(a)*1.9,2+Math.sin(time*2+i)*.6,Math.sin(a)*1.9);o.rotation.y+=dt*3;});
     if(s.flash>0){s.flash-=dt;s.rock.position.x=rand(-.08,.08);}else s.rock.position.x=0;
-    if(place(s.label,s.pos,4.4))s.label.querySelector('i').style.width=(s.hp/s.max*100)+'%';}
+    stoneTick(s,dt);if(place(s.label,s.pos,4.4))s.label.querySelector('i').style.width=(s.hp/s.max*100)+'%';}
   for(const r of stoneRespawn)r.t-=dt;while(stoneRespawn.length&&stoneRespawn[0].t<=0){const r=stoneRespawn.shift();if(r.reg===2)spawnStone(false,2);else spawnStone(stones.filter(s=>(s.reg||1)===1&&Math.hypot(s.x,s.z)<42).length<3);if(regionOf(pl.pos.x)===r.reg)toast('☄️ Gökten yeni bir Kadim Taş düştü!','#ffb0c0');}
   // npcs
   animVillage(dt);
@@ -5928,7 +6548,7 @@ $('bPot').querySelector('.cd').style.transform=`scaleY(${pl.potT})`;
   for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.t+=dt;const k=f.t/f.life;
     if(f.fade){f.m.material.opacity=1-k;}else if(f.spike){f.m.position.y=k<.25?-.6+k/.25*1.0:k>.75?.4-(k-.75)/.25*1.2:.4;}else if(f.up){f.m.position.addScaledVector(f.v,dt);f.m.material.opacity=1-k;f.m.scale.setScalar((f.s0||1)*(1-k*.6));}else if(f.sp){f.v.y-=14*dt;f.m.position.addScaledVector(f.v,dt);f.m.rotation.x+=dt*8;}else{f.m.scale.setScalar(1+k*f.max);f.m.material.opacity=1-k;}
     if(k>=1){relP(f.m);fx.splice(i,1);}}
-  if((miniT%15)===0)dayUpdate();updBoss(dt);updTeles(dt);dungeonTick(dt);regionTick(dt);lifeTick(dt);craftTick(dt);for(const b of BOSS2)updB(b,dt);if(shakeT>0)shakeT-=dt;
+  if((miniT%15)===0)dayUpdate();updBoss(dt);updTeles(dt);dungeonTick(dt);regionTick(dt);lifeTick(dt);craftTick(dt);debrisTick(dt);graveTick(dt);for(const b of BOSS2)updB(b,dt);if(shakeT>0)shakeT-=dt;
   $('qBox').style.visibility=$('bossBar').style.display==='block'?'hidden':'visible';
   // camera & sun
   swordFx(dt);const portrait=innerWidth<innerHeight,bz=(bossZ+=((anyBossFight()?(BOSS2.some(b=>b.state==='fight'&&b.rad>2)?1.6:1.35):1)*(riding?1.25:1)-bossZ)*Math.min(1,dt*2)),D=(portrait?15:12.5)*camZoom*bz,H=(portrait?18:15)*camPitch*camZoom*bz+.6*(1-camZoom);camOff.set(Math.sin(camYaw)*D,H,Math.cos(camYaw)*D);
