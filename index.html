@@ -5117,7 +5117,14 @@ setSnd(sndMode);
 const HORSES=[null,{n:'Kahverengi At',c:0x7a4a2a,m:0x3a2414,price:25000,spd:.6},{n:'Kır At',c:0xd8d4cc,m:0x8a8680,price:100000,spd:.9},{n:'Kara Savaş Atı',c:0x1e1c22,m:0x8a1a1a,price:400000,spd:1.3,fire:true}];
 const rider=new THREE.Group();while(P.g.children.length)rider.add(P.g.children[0]);P.g.add(rider);
 let horseM=null,riding=false;
-function buildHorse(t){const H=HORSES[t],g=new THREE.Group(),legs=[];
+const HORSE_T=[null,null,{Main:0xd8d4cc,Main_Dark:0xb4b0a8,Main_Light:0xeeeae4,Hair:0x9a968e,Muzzle:0x8a8680},{Main:0x1e1c22,Main_Dark:0x141216,Main_Light:0x2c2a32,Hair:0x7a1414,Muzzle:0x101010,_glow:{Eye_Black:0xff3010}}];
+const horseTpl={};
+function buildHorse(t){const e=GLBF['Horse.glb'];if(e&&e.state==='ok'){const H=HORSES[t];if(!horseTpl[t])horseTpl[t]=glbTemplate('Horse.glb',2.25,HORSE_T[t]);const T=horseTpl[t],g=new THREE.Group(),inner=THREE.SkeletonUtils.clone(T.scene);inner.scale.setScalar(T.s);g.add(inner);
+    g.add(box(.62,.1,.72,0x6a2a1a,0,1.47,-.1));g.add(box(.66,.26,.08,0x6a2a1a,0,1.33,-.46));g.add(box(.66,.14,.08,0xc9a35c,0,1.38,.26));
+    const mixer=new THREE.AnimationMixer(inner),p={mixer,clips:T.clips,cur:null,curN:''};skPlay(p,'Idle');let fire=null;if(H.fire)fire=fakeLight();g.position.set(0,0,-.1);
+    return {g,legs:[],neck:new THREE.Object3D(),tail:new THREE.Object3D(),fire,p};}
+  return buildHorseOld(t);}
+function buildHorseOld(t){const H=HORSES[t],g=new THREE.Group(),legs=[];
   g.add(box(.7,.75,1.75,H.c,0,1.3,0));const neck=new THREE.Group();neck.position.set(0,1.55,.8);g.add(neck);
   const nk=box(.4,.95,.42,H.c,0,.4,.12);nk.rotation.x=.55;neck.add(nk);neck.add(box(.38,.4,.8,H.c,0,.82,.5));neck.add(box(.1,.55,.65,H.m,0,.7,.05));
   for(const s of[-1,1])neck.add(mesh(new THREE.ConeGeometry(.06,.2,4),M(H.c),s*.11,1.1,.32));
@@ -5129,13 +5136,13 @@ function buildHorse(t){const H=HORSES[t],g=new THREE.Group(),legs=[];
   g.position.set(0,0,-.1);return {g,legs,neck,tail,fire};}
 function setRide(on){if(on&&!S.horse){openStable();return;}riding=on&&!pl.dead;
   if(horseM){P.g.remove(horseM.g);horseM=null;}
-  if(riding){horseM=buildHorse(S.horse);P.g.add(horseM.g);rider.position.y=1.0;rider.position.z=-.1;sparks(pl.pos,0xc9b08a,12,.4);tone(520,.08);setTimeout(()=>tone(390,.12),90);}
+  if(riding){horseM=buildHorse(S.horse);P.g.add(horseM.g);rider.position.y=horseM.p?.62:1.0;rider.position.z=-.1;sparks(pl.pos,0xc9b08a,12,.4);tone(520,.08);setTimeout(()=>tone(390,.12),90);}
   else{rider.position.y=0;rider.position.z=0;P.legL.rotation.z=P.legR.rotation.z=0;}
   $('bHorse').classList.toggle('on',riding);}
-function rideAnim(moving,dt){if(!riding||!horseM)return;P.legL.rotation.x=P.legR.rotation.x=-1.2;P.legL.rotation.z=.35;P.legR.rotation.z=-.35;
+function rideAnim(moving,dt){if(!riding||!horseM)return;if(horseM.p){horseM.p.mixer.update(dt);const w=moving?'Gallop':'Idle';if(horseM.p.curN!==w)skPlay(horseM.p,w,false,moving?1.15:1);}P.legL.rotation.x=P.legR.rotation.x=-1.2;P.legL.rotation.z=.35;P.legR.rotation.z=-.35;
   const gal=moving?Math.sin(time*13):0;horseM.legs.forEach((l,i)=>l.rotation.x=moving?Math.sin(time*13+(i<2?0:Math.PI)+(i%2)*.6)*.75:0);
   horseM.neck.rotation.x=moving?gal*.12:Math.sin(time*.8)*.06;horseM.tail.rotation.z=Math.sin(time*(moving?9:2))*.3;
-  rider.position.y=1.0+(moving?Math.abs(gal)*.12:0);horseM.g.position.y=moving?Math.abs(gal)*.08:0;
+  rider.position.y=(horseM.p?.62:1.0)+(moving?Math.abs(gal)*(horseM.p?.06:.12):0);horseM.g.position.y=horseM.p?0:(moving?Math.abs(gal)*.08:0);
   if(moving&&Math.random()<.25){sparks(pl.pos,0xb79a6a,1,.15);if(Math.random()<.12)noise(.04,.05,700);}
   if(horseM.fire){horseM.fire.intensity=.6+Math.random()*.5;if(Math.random()<.4)sparks({x:pl.pos.x,z:pl.pos.z},0xff6020,1,1.9);}}
 const mountSpd=()=>(riding&&S.horse?HORSES[S.horse].spd:0)+(pl.stealthT>0?.4:0);
@@ -5989,7 +5996,7 @@ function actPose(dt,moving){if(!act)return;const lp=$('lifeP');
 // To switch to another pack later: change files / blob ids / bone names / animation names below.
 const CHARMODEL={
   files:['Knight.glb','Rogue_Hooded.glb','Mage.glb','Barbarian.glb'],
-  blob:{'Knight.glb':'905e8e1d67634a6effa3eb3dc5d83874','Rogue_Hooded.glb':'d441c74be1ad8c500f9e7ca507402a05','Mage.glb':'50046084e3d2a66fcc1af1555c0c5b8e','Barbarian.glb':'15738e5486decc13472e9f46c96a2ad3','Skeleton_Warrior.glb':'9fb4f3328f0283210f6f025bde286256','Skeleton_Mage.glb':'eee55ba3fde16150001ceffe696ed202','Wolf.glb':'a4583ec43cfa4ba7c7df30d971f1f675','Bull.glb':'e96092d600d92f4fa28fabb5af57c3ab','Pirate_Male.glb':'73ca31386c41fef28322447cb0db5f55','Pirate_Female.glb':'d03394d9cfdf9a045a53fc7e3e9b2acc','Worker_Male.glb':'b265884bc1803d3093aa40eab9df6269','Casual_Female.glb':'2f7860c17769400607ff8192c9e05c3f','Witch.glb':'18a92cdb7e746eb7a05378cc342670b4','OldClassy_Male.glb':'c58b6cce5b3284ac02e32195bb817578','Cowboy_Male.glb':'8cf7fb74386190bf43904d240126ef0d','Viking_Male.glb':'48ca6a0df025ffcf705aaa5721c7dbb2','Chef_Female.glb':'d6dc6c5fb116394f78c920f8c0c909d3','Suit_Male.glb':'5ea418f2693fb0c4f26d291b73a16fca'},
+  blob:{'Knight.glb':'905e8e1d67634a6effa3eb3dc5d83874','Rogue_Hooded.glb':'d441c74be1ad8c500f9e7ca507402a05','Mage.glb':'50046084e3d2a66fcc1af1555c0c5b8e','Barbarian.glb':'15738e5486decc13472e9f46c96a2ad3','Skeleton_Warrior.glb':'9fb4f3328f0283210f6f025bde286256','Skeleton_Mage.glb':'eee55ba3fde16150001ceffe696ed202','Wolf.glb':'a4583ec43cfa4ba7c7df30d971f1f675','Bull.glb':'e96092d600d92f4fa28fabb5af57c3ab','Pirate_Male.glb':'73ca31386c41fef28322447cb0db5f55','Pirate_Female.glb':'d03394d9cfdf9a045a53fc7e3e9b2acc','Worker_Male.glb':'b265884bc1803d3093aa40eab9df6269','Casual_Female.glb':'2f7860c17769400607ff8192c9e05c3f','Witch.glb':'18a92cdb7e746eb7a05378cc342670b4','OldClassy_Male.glb':'c58b6cce5b3284ac02e32195bb817578','Cowboy_Male.glb':'8cf7fb74386190bf43904d240126ef0d','Viking_Male.glb':'48ca6a0df025ffcf705aaa5721c7dbb2','Chef_Female.glb':'d6dc6c5fb116394f78c920f8c0c909d3','Suit_Male.glb':'5ea418f2693fb0c4f26d291b73a16fca','Horse.glb':'e2f1cc57e9456d104a32abacce05f1f1'},
   handR:'handslot.r',handL:'handslot.l',height:2.15,
   anim:[
     {idle:'Idle',walk:'Walking_A',run:'Running_A',atk:['1H_Melee_Attack_Slice_Diagonal','1H_Melee_Attack_Chop','1H_Melee_Attack_Slice_Horizontal','1H_Melee_Attack_Stab'],
@@ -6132,9 +6139,9 @@ const AH={idle:'Idle',walk:'Walk',run:'Run',atk:'SwordSlash',die:'Death',hit:'Re
 const ASK={idle:'Idle',idle2:'Idle_Combat',walk:'Walking_D_Skeletons',run:'Running_A',die:'Death_C_Skeletons',hit:'Hit_A',rise:'Skeletons_Awaken_Floor'};
 const MOBGLB={
   wolf:{file:'Wolf.glb',h:1.2,tint:{Main:0x8a8c96,Main_Light:0xc8c9d0},a:AQ},
-  dwolf:{file:'Wolf.glb',h:1.45,tint:{Main:0x24242b,Main_Light:0x3e3e48},a:AQ,eyes:1},
+  dwolf:{file:'Wolf.glb',h:1.45,tint:{Main:0x24242b,Main_Light:0x3e3e48,_glow:{Eyes_Black:0xff2a1a}},a:AQ},
   boar:{file:'Bull.glb',h:1.55,tint:{Main:0x8a2a18,Main_Light:0xb0583a},a:Object.assign({},AQ,{atk:'Attack_Headbutt'})},
-  pirate:{file:'Pirate_Male.glb',alt:'Pirate_Female.glb',h:2.1,a:AH},
+  pirate:{file:'Pirate_Male.glb',alt:'Pirate_Female.glb',h:2.1,tint:{Skin:0xc99470},a:AH},
   skwar:{file:'Skeleton_Warrior.glb',h:2.05,w:'sword',a:Object.assign({atk:'1H_Melee_Attack_Chop'},ASK),lazy:1},
   skel:{file:'Skeleton_Warrior.glb',h:2.05,w:'sword',a:Object.assign({atk:'1H_Melee_Attack_Chop'},ASK),lazy:1},
   skmage:{file:'Skeleton_Mage.glb',h:2.05,w:'staff',a:Object.assign({atk:'Spellcast_Shoot'},ASK),lazy:1}};
@@ -6145,7 +6152,7 @@ function glbLoad(file,cb){let e=GLBF[file];if(e&&e.state==='ok'){cb&&cb(e);retur
 function glbTemplate(file,h,tint){const e=GLBF[file],r=THREE.SkeletonUtils.clone(e.scene);r.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(r);const s=h/Math.max(.05,b.max.y-b.min.y);
   const mats=new Map();r.traverse(o=>{if(!o.isMesh)return;const arr=Array.isArray(o.material)?o.material:[o.material];
     const nm=arr.map(old=>{if(mats.has(old))return mats.get(old);const c=tint&&tint[old.name]!=null?tint[old.name]:(old.color?old.color.clone().convertLinearToSRGB().getHex():0xffffff);
-      const mt=new THREE.MeshPhongMaterial({map:old.map||null,color:c,shininess:14,skinning:!!o.isSkinnedMesh});if(mt.map)mt.map.encoding=THREE.LinearEncoding;mats.set(old,mt);return mt;});
+      const gl=tint&&tint._glow&&tint._glow[old.name];const mt=gl!=null?new THREE.MeshBasicMaterial({color:gl,skinning:!!o.isSkinnedMesh}):new THREE.MeshPhongMaterial({map:old.map||null,color:c,shininess:14,skinning:!!o.isSkinnedMesh});if(mt.map)mt.map.encoding=THREE.LinearEncoding;mats.set(old,mt);return mt;});
     o.material=Array.isArray(o.material)?nm:nm[0];o.castShadow=true;o.frustumCulled=false;});
   return {scene:r,s,clips:e.clips};}
 const MSRC={};
@@ -6158,7 +6165,6 @@ function glbMob(k){const d=MOBGLB[k],src0=MSRC[k],src=src0.alt&&Math.random()<.4
     if(hand){const w=new THREE.Group();w.scale.setScalar(.7/src.s);hand.add(w);
       if(d.w==='sword'){w.add(smesh(new THREE.BoxGeometry(.09,1.0,.025),0x8a7a6a,0,.62,0));w.add(smesh(new THREE.BoxGeometry(.32,.05,.06),0x5a4a3a,0,.1,0));w.add(smesh(new THREE.CylinderGeometry(.03,.03,.2,6),0x3a2a1a,0,0,0));}
       else{w.add(smesh(new THREE.CylinderGeometry(.03,.035,1.6,6),0x3a2a1a,0,.3,0));const o=new THREE.Mesh(new THREE.OctahedronGeometry(.12,0),new THREE.MeshBasicMaterial({color:0x9a5aff}));o.position.y=1.15;w.add(o);}}}
-  if(d.eyes){for(const s of[-1,1]){const e=new THREE.Mesh(new THREE.SphereGeometry(.05,6,4),new THREE.MeshBasicMaterial({color:0xff2020}));e.position.set(s*.13,d.h*.78,d.h*.55);g.add(e);}}
   const mixer=new THREE.AnimationMixer(inner);const p={g,legs:[],body,mixer,clips:src.clips,a:d.a,cur:null,curN:'',lock:0,pf:0};skPlay(p,d.a.idle);return p;}
 // wrap TYPES model builders: use 3D model when ready, old one otherwise
 for(const k in MOBGLB){const t=TYPES[k];if(!t)continue;const old=t.model||null;t.model=()=>mobReady(k)?glbMob(k):(old?old():beastOld(t));}
@@ -6181,11 +6187,11 @@ const NPCGLB=[[/Demirci/,'Worker_Male.glb','SwordSlash'],[/Satıcı/,'Casual_Fem
   [/Kaptan/,'Viking_Male.glb'],[/Hancı/,'Chef_Female.glb'],[/Emlakçı/,'Suit_Male.glb']];
 const NPCT={};
 function npcModels(){for(const n of npcs){if(n.glb||!n.p||!n.p.g||!n.p.g.isObject3D||n.pseudo)continue;const r=NPCGLB.find(x=>x[0].test(n.name));if(!r)continue;n.glb=1;
-  glbLoad(r[1],()=>{if(!NPCT[r[1]])NPCT[r[1]]=glbTemplate(r[1],2.1);const T=NPCT[r[1]],inner=THREE.SkeletonUtils.clone(T.scene);inner.scale.setScalar(T.s);
+  glbLoad(r[1],()=>{if(!NPCT[r[1]])NPCT[r[1]]=glbTemplate(r[1],2.1,{Skin:[0xe8bb94,0xd9a47a,0xf0c8a4,0xc68e66][NPCGLB.indexOf(r)%4]});const T=NPCT[r[1]],inner=THREE.SkeletonUtils.clone(T.scene);inner.scale.setScalar(T.s);
     for(const c of n.p.g.children)c.visible=false;n.p.g.add(inner);n.mixer=new THREE.AnimationMixer(inner);const act=r[2]||'Idle';const p={mixer:n.mixer,clips:T.clips,cur:null};skPlay(p,act,false,r[2]?.7:1);});}}
 function npcAnimTick(dt){for(const n of npcs)if(n.mixer&&n.pos.distanceTo(pl.pos)<45)n.mixer.update(dt);}
 let mobPre=false;
-function mobModelsTick(dt){if(!started)return;if(!mobPre){mobPre=true;setTimeout(()=>{['wolf','dwolf','boar','pirate'].forEach(k=>mobPreload(k,()=>mobSwap(k)));npcModels();},1500);}
+function mobModelsTick(dt){if(!started)return;if(!mobPre){mobPre=true;setTimeout(()=>{glbLoad('Horse.glb',()=>{if(riding&&horseM&&!horseM.p){P.g.remove(horseM.g);horseM=buildHorse(S.horse);P.g.add(horseM.g);rider.position.y=.62;}});['wolf','dwolf','boar','pirate'].forEach(k=>mobPreload(k,()=>mobSwap(k)));npcModels();},1500);}
   if((isNight||inDungeon)&&!(GLBF['Skeleton_Warrior.glb']&&GLBF['Skeleton_Warrior.glb'].state!=='new')){['skwar','skmage','skel'].forEach(k=>mobPreload(k,()=>mobSwap(k)));}
   npcAnimTick(dt);}
 // graveyards
