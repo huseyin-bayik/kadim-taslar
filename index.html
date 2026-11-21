@@ -160,7 +160,7 @@ label.chk{display:flex;gap:8px;align-items:center;justify-content:center;font-si
 <div class="ov on" id="title"><div style="text-align:center;max-width:420px">
   <h1>KADİM<br>TAŞLAR</h1>
   <div class="s">Göklerden düşen lanetli taşlar ormanı sardı.<br>Köyü koru, taşları kır, efsane ol.</div>
-  <button class="btn" id="play" style="display:none">Oyuna Gir</button><div id="slotList"></div><button class="btn g" id="codeBtn">💾 Kayıt Kodu</button>
+  <button class="btn" id="play" style="display:none">Oyuna Gir</button><div id="slotList"></div><div id="fbBox" style="display:none;margin:4px 0 8px;font-size:13px;color:#bfe3ff"></div><button class="btn g" id="codeBtn">💾 Kayıt Kodu</button>
   <div id="saveInfo" style="color:#bfe3ff;font-size:12.5px;margin-top:10px">⏳ Kayıt kontrol ediliyor...</div>
   <div class="tip">Sol taraf: sürükleyerek yürü · ⚔️ basılı tut: en yakın düşmana saldır<br>Sağ taraf: sürükleyerek kamerayı döndür<br>💨 Hamle · 🌀 Kasırga · 🧪 İksir · 🎒 Envanter · 🗺️ Harita</div>
 </div></div>
@@ -262,6 +262,16 @@ label.chk{display:flex;gap:8px;align-items:center;justify-content:center;font-si
   <button class="btn g" data-close>Kapat</button>
 </div></div>
 
+<div class="ov" id="fbP"><div class="pn">
+  <h2>☁️ Bulut Kaydı</h2>
+  <p>Hesabına giriş yap, bütün karakterlerin buluta kaydedilsin. Telefonu değiştirsen de, uygulamayı silsen de giriş yapınca geri gelir.</p>
+  <input id="fbMail" type="email" autocomplete="email" placeholder="E-posta" style="width:100%;border-radius:8px;background:#0006;color:#fff;border:1px solid #8a6a3a;padding:11px;font:15px Inter;margin:5px 0">
+  <input id="fbPass" type="password" autocomplete="current-password" placeholder="Şifre (en az 6 karakter)" style="width:100%;border-radius:8px;background:#0006;color:#fff;border:1px solid #8a6a3a;padding:11px;font:15px Inter;margin:5px 0">
+  <div id="fbMsg" style="min-height:20px;font-size:13px;font-weight:700;margin:4px 0"></div>
+  <button class="btn" id="fbIn">Giriş yap</button><button class="btn g" id="fbUp">Yeni hesap oluştur</button>
+  <div><button class="btn g" id="fbForgot" style="font-size:12px;padding:6px 10px">Şifremi unuttum</button><button class="btn g" data-close style="font-size:12px;padding:6px 10px">Kapat</button></div>
+</div></div>
+
 <div class="ov" id="skP"><div class="pn" style="max-width:440px">
   <h2>⭐ Beceriler</h2>
   <div id="skHead" style="font-size:13px;color:#f0dfbf"></div>
@@ -299,6 +309,10 @@ label.chk{display:flex;gap:8px;align-items:center;justify-content:center;font-si
   <button class="btn" id="respawn">Köyde yeniden doğ</button>
 </div></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>window.KT_FB={apiKey:"AIzaSyDB3FCJpF8rK-gL5UycZQD1JYPsEXB4rxY",authDomain:"kadim-taslar.firebaseapp.com",projectId:"kadim-taslar",storageBucket:"kadim-taslar.firebasestorage.app",messagingSenderId:"519712361002",appId:"1:519712361002:web:6078294fedb4da5c6b9153"};</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (()=>{
@@ -565,6 +579,7 @@ function setSaveInfo(t){const el=document.getElementById('saveInfo');if(el)el.te
 function readyPlay(){if(typeof renderSlots==='function')renderSlots();}
 function applySave(d){resetS();Object.assign(S,d);if(typeof applyClass==='function'&&classRoot){applyClass();save();return;}ensureEq();try{if(typeof setPet==='function')setPet(S.pet||0);}catch(e){}try{$('bHorse').style.display=S.horse?'block':'none';}catch(e){}if(typeof renderQuest==='function'&&typeof muhtarN!=='undefined')setTimeout(renderQuest,0);if(typeof ensureSk==='function'){ensureSk();renderSkillBtns();}recalc();updateLook();pl.hp=maxHp();hud();}
 async function cloudInit(){
+  if(window.KT_FB&&window.firebase){fbInit();return;}
   renderSlots(true);setTimeout(readyPlay,6000);
   if(!window.claude||!claude.use){readyPlay();setSaveInfo('📱 Kayıt bu cihazda tutuluyor. Yedek için “Kayıt Kodu”nu kullan.');return;}
   const timer=setTimeout(()=>{readyPlay();setSaveInfo('📱 Hesap kaydına ulaşılamadı, bu cihazda kaydediliyor.');},10000);
@@ -1279,6 +1294,35 @@ let fpsN=0,fpsT=0;function fpsTick(dt){if(!GFX.fps)return;fpsN++;fpsT+=dt;if(fps
 // single moving torch light in the dungeon (instead of 4 fixed lights)
 const dTorch=new THREE.PointLight(0xff9a4a,0,30);scene.add(dTorch);
 applyGfx();
+
+// ---------------- FIREBASE CLOUD (GitHub version only) ----------------
+let fbUser=null;
+const FBERR={'auth/invalid-email':'E-posta adresi geçersiz.','auth/user-not-found':'Bu e-postayla hesap yok. "Yeni hesap oluştur"a bas.','auth/wrong-password':'Şifre yanlış.','auth/invalid-credential':'E-posta ya da şifre yanlış.','auth/invalid-login-credentials':'E-posta ya da şifre yanlış.',
+  'auth/email-already-in-use':'Bu e-postayla zaten hesap var, "Giriş yap"a bas.','auth/weak-password':'Şifre en az 6 karakter olmalı.','auth/network-request-failed':'İnternet bağlantısı yok gibi.','auth/too-many-requests':'Çok fazla deneme oldu, biraz sonra tekrar dene.','auth/missing-password':'Şifreyi yaz.'};
+function fbMsg(t,ok){const m=$('fbMsg');m.textContent=t;m.style.color=ok?'#c9f27a':'#ff9a8a';}
+function renderFb(u){const b=$('fbBox');b.style.display='block';
+  b.innerHTML=u?`☁️ Bulutta: <b>${u.email}</b> <button class="btn g" id="fbOut" style="padding:5px 10px;font-size:12px;margin:0 0 0 6px">Çıkış</button>`
+    :`<button class="btn" id="fbOpen" style="padding:9px 16px;font-size:14px">☁️ Buluta kaydet: Giriş yap</button>`;
+  if($('fbOut'))$('fbOut').onclick=()=>{save();cloudPush();setTimeout(()=>firebase.auth().signOut(),400);};
+  if($('fbOpen'))$('fbOpen').onclick=()=>{fbMsg('',1);$('fbP').classList.add('on');};}
+function fbInit(){try{if(!firebase.apps.length)firebase.initializeApp(window.KT_FB);}catch(e){}
+  const auth=firebase.auth(),fs=firebase.firestore();try{fs.settings({experimentalAutoDetectLongPolling:true,merge:true});}catch(e){}
+  const cred=()=>[$('fbMail').value.trim(),$('fbPass').value];
+  $('fbIn').onclick=()=>{const [m,p]=cred();fbMsg('⏳ Giriş yapılıyor...',1);auth.signInWithEmailAndPassword(m,p).then(()=>{$('fbP').classList.remove('on');}).catch(e=>fbMsg(FBERR[e.code]||('Hata: '+e.code)));};
+  $('fbUp').onclick=()=>{const [m,p]=cred();fbMsg('⏳ Hesap oluşturuluyor...',1);auth.createUserWithEmailAndPassword(m,p).then(()=>{$('fbP').classList.remove('on');toast('☁️ Hesabın oluşturuldu, karakterlerin buluta yükleniyor','#bfe3ff');}).catch(e=>fbMsg(FBERR[e.code]||('Hata: '+e.code)));};
+  $('fbForgot').onclick=()=>{const [m]=cred();if(!m){fbMsg('Önce e-postanı yaz.');return;}auth.sendPasswordResetEmail(m).then(()=>fbMsg('📧 Şifre sıfırlama e-postası gönderildi.',1)).catch(e=>fbMsg(FBERR[e.code]||('Hata: '+e.code)));};
+  auth.onAuthStateChanged(async u=>{fbUser=u;renderFb(u);
+    if(!u){cloudCol=null;readyPlay();setSaveInfo('📱 Kayıt sadece bu cihazda. Kaybolmasın diye buluta giriş yap.');return;}
+    renderSlots(true);setSaveInfo('⏳ Bulut kaydı yükleniyor...');
+    const col=fs.collection('saves').doc(u.uid).collection('slots');
+    try{const snaps=await Promise.all([0,1,2,3].map(i=>col.doc(slotDoc(i)).get()));cloudCol=col;
+      snaps.forEach((sn,i)=>{const d=sn&&sn.exists?pick(sn.data()||{}):null,loc=slots[i];
+        if(d&&(d.ts||0)>((loc&&loc.ts)||0)){slots[i]=d;try{localStorage.setItem(slotKey(i),JSON.stringify(d));}catch(e){}}
+        else if(loc&&(!d||(loc.ts||0)>(d.ts||0)))col.doc(slotDoc(i)).set(JSON.parse(JSON.stringify(loc))).catch(()=>{});});
+      if(started&&slots[curSlot]&&(slots[curSlot].ts||0)>(S.ts||0)){applySave(slots[curSlot]);toast(`☁️ Buluttaki kayıt yüklendi: Seviye ${S.lvl}`,'#bfe3ff');}
+      setSaveInfo('☁️ Karakterlerin buluta kaydediliyor. Her cihazda giriş yapınca geri gelir.');
+    }catch(e){setSaveInfo('⚠️ Buluta ulaşılamadı ('+(e.code||'bağlantı')+'), şimdilik bu cihazda kaydediliyor.');}
+    readyPlay();});}
 
 // ---------------- player logic ----------------
 function hud(){const mh=maxHp();$('lvl').textContent='Sv.'+S.lvl;$('hpb').querySelector('i').style.width=(pl.hp/mh*100)+'%';$('hpb').querySelector('span').textContent=Math.ceil(pl.hp)+' / '+mh;
