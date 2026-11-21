@@ -201,7 +201,7 @@ input,textarea{font-size:16px!important}
 
 <div class="ov" id="mapP"><div style="text-align:center">
   <canvas id="bigMap" width="840" height="840"></canvas>
-  <div style="font-size:12.5px;color:#f0dfbf;margin-top:8px">⬆️ Sen · 🔴 Kadim Taş · 🔵 Köy · Halkalar: Kurt / Domuz / Kara Kurt bölgeleri</div>
+  <div style="font-size:12.5px;color:#f0dfbf;margin-top:8px">⬆️ Sen · 🔴 Kadim Taş · 🔵 Köy · Halkalar: Kurt / Boğa / Kara Kurt bölgeleri</div>
   <button class="btn g" data-close>Kapat</button>
 </div></div>
 
@@ -4846,7 +4846,7 @@ function noise(d=.12,v=.12,f=1200){if(!AC||muted)return;try{const b=AC.createBuf
 // ---------------- mobs ----------------
 const TYPES={
   wolf:{name:'Kurt',hp:45,dmg:5,exp:14,spd:5,col:0x8d9099,dark:0x5d6069,boar:false},
-  boar:{name:'Yaban Domuzu',hp:85,dmg:9,exp:24,spd:4.2,col:0x6e4a30,dark:0x4a2f1c,boar:true},
+  boar:{name:'Kızgın Boğa',hp:85,dmg:9,exp:24,spd:4.2,col:0x6e4a30,dark:0x4a2f1c,boar:true},
   dwolf:{name:'Kara Kurt',hp:130,dmg:14,exp:42,spd:5.8,col:0x2c2c34,dark:0x18181e,boar:false,eyes:true}
 };
 function beast(t){if(t.model)return t.model();const g=new THREE.Group(),b=t.boar,p={g,legs:[]};
@@ -5014,7 +5014,7 @@ const QUESTS=[
  {n:'Köyün Derdi',t:'Kurtlar geceleri tavuklarımıza diş biliyor evlat. Şunlardan beşini haklarsan köy rahat uyur.',ev:'kill',type:'wolf',need:5,o:'Kurt kes',rew:{gold:600,pots:3}},
  {n:'İlk Taş',t:'Gökten düşen o kırmızı taşları gördün mü? Biri köye çok yakın. Kır onu, ne olduğunu anlayalım.',ev:'stone',need:1,o:'Kadim Taş kır',rew:{gold:900,scrolls:1}},
  {n:'Demircinin Ricası',t:'Demirci usta "Bana iş getirsinler" diye söyleniyor. Bir eşyanı +3\'e bastır da adam sevinsin.',ev:'plus',need:3,o:'Bir eşyayı +3 yap',rew:{book:2,gold:1200}},
- {n:'Domuz Avı',t:'Yaban domuzları tarlaları talan ediyor. On tanesini kovala bakalım.',ev:'kill',type:'boar',need:10,o:'Yaban Domuzu kes',rew:{gold:2500,skb:1}},
+ {n:'Boğa Avı',t:'Kızgın boğalar tarlaları talan ediyor. On tanesini durdur bakalım.',ev:'kill',type:'boar',need:10,o:'Kızgın Boğa kes',rew:{gold:2500,skb:1}},
  {n:'Büyücünün Sınavı',t:'Büyücü Nine kimseye güvenmez. Ona bir eşyanın efsununu değiştirt, seni tanısın.',ev:'reroll',need:1,o:'Efsun değiştir',rew:{rer:3,gold:1500}},
  {n:'Taş Avcısı',t:'Taşlar çoğalıyor. Beşini kırarsan gökyüzü belki biraz susar.',ev:'stone',need:5,o:'Kadim Taş kır',rew:{soul:1,gold:5000}},
  {n:'Kara Gölge',t:'Kuzeyde gözleri kızıl yanan kurtlar varmış. On beşini indir, korkuyu biz salalım.',ev:'kill',type:'dwolf',need:15,o:'Kara Kurt kes',rew:{gold:8000,item:{t:3,mb:1}}},
@@ -5989,7 +5989,7 @@ function actPose(dt,moving){if(!act)return;const lp=$('lifeP');
 // To switch to another pack later: change files / blob ids / bone names / animation names below.
 const CHARMODEL={
   files:['Knight.glb','Rogue_Hooded.glb','Mage.glb','Barbarian.glb'],
-  blob:{'Knight.glb':'905e8e1d67634a6effa3eb3dc5d83874','Rogue_Hooded.glb':'d441c74be1ad8c500f9e7ca507402a05','Mage.glb':'50046084e3d2a66fcc1af1555c0c5b8e','Barbarian.glb':'15738e5486decc13472e9f46c96a2ad3','Skeleton_Warrior.glb':'9fb4f3328f0283210f6f025bde286256','Skeleton_Mage.glb':'eee55ba3fde16150001ceffe696ed202'},
+  blob:{'Knight.glb':'905e8e1d67634a6effa3eb3dc5d83874','Rogue_Hooded.glb':'d441c74be1ad8c500f9e7ca507402a05','Mage.glb':'50046084e3d2a66fcc1af1555c0c5b8e','Barbarian.glb':'15738e5486decc13472e9f46c96a2ad3','Skeleton_Warrior.glb':'9fb4f3328f0283210f6f025bde286256','Skeleton_Mage.glb':'eee55ba3fde16150001ceffe696ed202','Wolf.glb':'a4583ec43cfa4ba7c7df30d971f1f675','Bull.glb':'e96092d600d92f4fa28fabb5af57c3ab','Pirate_Male.glb':'73ca31386c41fef28322447cb0db5f55','Pirate_Female.glb':'d03394d9cfdf9a045a53fc7e3e9b2acc','Worker_Male.glb':'b265884bc1803d3093aa40eab9df6269','Casual_Female.glb':'2f7860c17769400607ff8192c9e05c3f','Witch.glb':'18a92cdb7e746eb7a05378cc342670b4','OldClassy_Male.glb':'c58b6cce5b3284ac02e32195bb817578','Cowboy_Male.glb':'8cf7fb74386190bf43904d240126ef0d','Viking_Male.glb':'48ca6a0df025ffcf705aaa5721c7dbb2','Chef_Female.glb':'d6dc6c5fb116394f78c920f8c0c909d3','Suit_Male.glb':'5ea418f2693fb0c4f26d291b73a16fca'},
   handR:'handslot.r',handL:'handslot.l',height:2.15,
   anim:[
     {idle:'Idle',walk:'Walking_A',run:'Running_A',atk:['1H_Melee_Attack_Slice_Diagonal','1H_Melee_Attack_Chop','1H_Melee_Attack_Slice_Horizontal','1H_Melee_Attack_Stab'],
@@ -6011,7 +6011,7 @@ function kmLoad(cls){if(typeof THREE.GLTFLoader!=='function')return;if(KM&&KM.cl
 function kmBuild(cls,g){const root=g.scene;root.updateMatrixWorld(true);
   const box3=new THREE.Box3().setFromObject(root),h=Math.max(.1,box3.max.y-box3.min.y),s=CHARMODEL.height/h;root.scale.setScalar(s);
   root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;const old=o.material;
-      const mat=new THREE.MeshPhongMaterial({map:old.map||null,color:old.map?0xffffff:(old.color?old.color.getHex():0xffffff),shininess:18,skinning:!!o.isSkinnedMesh});
+      const mat=new THREE.MeshPhongMaterial({map:old.map||null,color:old.map?0xffffff:(old.color?old.color.clone().convertLinearToSRGB().getHex():0xffffff),shininess:18,skinning:!!o.isSkinnedMesh});
       if(mat.map){mat.map.encoding=THREE.LinearEncoding;mat.map.needsUpdate=true;}o.material=mat;}});
   let hR=null,hL=null;const nn=x=>x.replace(/[^a-z0-9]/gi,'').toLowerCase();root.traverse(o=>{if(nn(o.name)===nn(CHARMODEL.handR))hR=o;if(nn(o.name)===nn(CHARMODEL.handL))hL=o;});
   const holdR=new THREE.Group(),holdL=new THREE.Group();holdR.scale.setScalar(.68/s);holdL.scale.setScalar(.68/s);(hR||root).add(holdR);(hL||root).add(holdL);
@@ -6124,32 +6124,70 @@ function stoneShatter(s){const col=s.reg===2?0x4a2a26:0x2c2834;for(let i=0;i<14;
     m.position.set(s.x+rand(-.6,.6),rand(.8,3.2),s.z+rand(-.6,.6));m.castShadow=true;scene.add(m);const a=Math.random()*6.28,sp=rand(3,7);debris.push({m,v:new V3(Math.cos(a)*sp,rand(3,8),Math.sin(a)*sp),t:0,r:new V3(rand(-8,8),rand(-8,8),0)});}}
 function debrisTick(dt){for(let i=debris.length-1;i>=0;i--){const d=debris[i];d.t+=dt;if(d.m.position.y>.15){d.v.y-=18*dt;d.m.position.addScaledVector(d.v,dt);d.m.rotation.x+=d.r.x*dt;d.m.rotation.y+=d.r.y*dt;if(d.m.position.y<.15){d.m.position.y=.15;d.v.multiplyScalar(.3);}}
     if(d.t>2.2)d.m.position.y-=dt*.6;if(d.t>3.2){scene.remove(d.m);d.m.geometry.dispose();debris.splice(i,1);}}}
-// ---- skeleton enemies (KayKit Skeletons, CC0) ----
-const SKEL={files:{skwar:'Skeleton_Warrior.glb',skmage:'Skeleton_Mage.glb'},blob:{},src:{},loading:false,ready:false};
-TYPES.skwar={name:'İskelet Savaşçı',hp:130,dmg:13,exp:40,spd:4.3,model:()=>skelModel('skwar'),skel:1,atk:'1H_Melee_Attack_Chop'};
-TYPES.skmage={name:'İskelet Büyücü',hp:95,dmg:15,exp:44,spd:3.6,range:7,model:()=>skelModel('skmage'),skel:1,atk:'Spellcast_Shoot'};
-function skelLoad(){if(SKEL.loading||typeof THREE.GLTFLoader!=='function')return;SKEL.loading=true;const L=new THREE.GLTFLoader();let n=0;const keys=Object.keys(SKEL.files);
-  keys.forEach(k=>{const f=SKEL.files[k],urls=kmUrl(f);
-    const go=i=>L.load(urls[i],g=>{const r=g.scene;r.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(r);const s=2.05/Math.max(.1,b.max.y-b.min.y);
-      r.traverse(o=>{if(o.isMesh){const old=o.material;const mt=new THREE.MeshPhongMaterial({map:old.map||null,shininess:15,skinning:!!o.isSkinnedMesh});if(mt.map)mt.map.encoding=THREE.LinearEncoding;o.material=mt;}});
-      const clips={};for(const a of g.animations)clips[a.name]=a;SKEL.src[k]={scene:r,s,clips};if(++n===keys.length)SKEL.ready=true;},null,()=>{if(i+1<urls.length)go(i+1);});go(0);});}
-function skelModel(k){const src=SKEL.src[k],g=new THREE.Group(),inner=THREE.SkeletonUtils.clone(src.scene);inner.scale.setScalar(src.s);g.add(inner);
-  inner.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;}});const body=new THREE.Group();g.add(body);
-  let hand=null;inner.traverse(o=>{if(o.name.replace(/[^a-z0-9]/gi,'').toLowerCase()==='handslotr')hand=o;});
-  if(hand){const w=new THREE.Group();w.scale.setScalar(.7/src.s);hand.add(w);
-    if(k==='skwar'){w.add(smesh(new THREE.BoxGeometry(.09,1.0,.025),0x8a7a6a,0,.62,0));w.add(smesh(new THREE.BoxGeometry(.32,.05,.06),0x5a4a3a,0,.1,0));w.add(smesh(new THREE.CylinderGeometry(.03,.03,.2,6),0x3a2a1a,0,0,0));}
-    else{w.add(smesh(new THREE.CylinderGeometry(.03,.035,1.6,6),0x3a2a1a,0,.3,0));const o=new THREE.Mesh(new THREE.OctahedronGeometry(.12,0),new THREE.MeshBasicMaterial({color:0x9a5aff}));o.position.y=1.15;w.add(o);}}
-  const mixer=new THREE.AnimationMixer(inner);return {g,legs:[],body,mixer,clips:src.clips,cur:null,curN:''};}
+TYPES.skwar={name:'İskelet Savaşçı',hp:130,dmg:13,exp:40,spd:4.3,skel:1,atk:'1H_Melee_Attack_Chop'};
+TYPES.skmage={name:'İskelet Büyücü',hp:95,dmg:15,exp:44,spd:3.6,range:7,skel:1,atk:'Spellcast_Shoot'};
+// ---- 3D monster & NPC models (generic glTF adapter; KayKit + Quaternius, CC0) ----
+const AQ={idle:'Idle',walk:'Walk',run:'Gallop',atk:'Attack',die:'Death',hit:'Idle_HitReact1'};
+const AH={idle:'Idle',walk:'Walk',run:'Run',atk:'SwordSlash',die:'Death',hit:'RecieveHit'};
+const ASK={idle:'Idle',idle2:'Idle_Combat',walk:'Walking_D_Skeletons',run:'Running_A',die:'Death_C_Skeletons',hit:'Hit_A',rise:'Skeletons_Awaken_Floor'};
+const MOBGLB={
+  wolf:{file:'Wolf.glb',h:1.2,tint:{Main:0x8a8c96,Main_Light:0xc8c9d0},a:AQ},
+  dwolf:{file:'Wolf.glb',h:1.45,tint:{Main:0x24242b,Main_Light:0x3e3e48},a:AQ,eyes:1},
+  boar:{file:'Bull.glb',h:1.55,tint:{Main:0x8a2a18,Main_Light:0xb0583a},a:Object.assign({},AQ,{atk:'Attack_Headbutt'})},
+  pirate:{file:'Pirate_Male.glb',alt:'Pirate_Female.glb',h:2.1,a:AH},
+  skwar:{file:'Skeleton_Warrior.glb',h:2.05,w:'sword',a:Object.assign({atk:'1H_Melee_Attack_Chop'},ASK),lazy:1},
+  skel:{file:'Skeleton_Warrior.glb',h:2.05,w:'sword',a:Object.assign({atk:'1H_Melee_Attack_Chop'},ASK),lazy:1},
+  skmage:{file:'Skeleton_Mage.glb',h:2.05,w:'staff',a:Object.assign({atk:'Spellcast_Shoot'},ASK),lazy:1}};
+const GLBF={};// file -> {state,scene,clips,cbs}
+function glbLoad(file,cb){let e=GLBF[file];if(e&&e.state==='ok'){cb&&cb(e);return;}if(!e)e=GLBF[file]={state:'new',cbs:[]};if(cb)e.cbs.push(cb);
+  if(e.state!=='new'||typeof THREE.GLTFLoader!=='function')return;e.state='loading';const urls=kmUrl(file),L=new THREE.GLTFLoader();
+  const go=i=>L.load(urls[i],g=>{e.scene=g.scene;e.clips={};for(const a of g.animations)e.clips[a.name]=a;e.state='ok';e.cbs.splice(0).forEach(f=>f(e));},null,()=>{if(i+1<urls.length)go(i+1);else e.state='fail';});go(0);}
+function glbTemplate(file,h,tint){const e=GLBF[file],r=THREE.SkeletonUtils.clone(e.scene);r.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(r);const s=h/Math.max(.05,b.max.y-b.min.y);
+  const mats=new Map();r.traverse(o=>{if(!o.isMesh)return;const arr=Array.isArray(o.material)?o.material:[o.material];
+    const nm=arr.map(old=>{if(mats.has(old))return mats.get(old);const c=tint&&tint[old.name]!=null?tint[old.name]:(old.color?old.color.clone().convertLinearToSRGB().getHex():0xffffff);
+      const mt=new THREE.MeshPhongMaterial({map:old.map||null,color:c,shininess:14,skinning:!!o.isSkinnedMesh});if(mt.map)mt.map.encoding=THREE.LinearEncoding;mats.set(old,mt);return mt;});
+    o.material=Array.isArray(o.material)?nm:nm[0];o.castShadow=true;o.frustumCulled=false;});
+  return {scene:r,s,clips:e.clips};}
+const MSRC={};
+function mobReady(k){const d=MOBGLB[k];if(!d)return false;if(MSRC[k])return true;const e=GLBF[d.file];if(!e||e.state!=='ok')return false;
+  MSRC[k]=glbTemplate(d.file,d.h,d.tint);if(d.alt&&GLBF[d.alt]&&GLBF[d.alt].state==='ok')MSRC[k].alt=glbTemplate(d.alt,d.h,d.tint);return true;}
+function mobPreload(k,cb){const d=MOBGLB[k];if(!d)return;let n=d.alt?2:1;const done=()=>{if(--n===0){MSRC[k]=null;delete MSRC[k];mobReady(k);cb&&cb();}};glbLoad(d.file,done);if(d.alt)glbLoad(d.alt,done);}
+function glbMob(k){const d=MOBGLB[k],src0=MSRC[k],src=src0.alt&&Math.random()<.4?src0.alt:src0,g=new THREE.Group(),inner=THREE.SkeletonUtils.clone(src.scene);
+  inner.scale.setScalar(src.s);g.add(inner);const body=new THREE.Group();g.add(body);
+  if(d.w){let hand=null;inner.traverse(o=>{if(o.name.replace(/[^a-z0-9]/gi,'').toLowerCase()==='handslotr')hand=o;});
+    if(hand){const w=new THREE.Group();w.scale.setScalar(.7/src.s);hand.add(w);
+      if(d.w==='sword'){w.add(smesh(new THREE.BoxGeometry(.09,1.0,.025),0x8a7a6a,0,.62,0));w.add(smesh(new THREE.BoxGeometry(.32,.05,.06),0x5a4a3a,0,.1,0));w.add(smesh(new THREE.CylinderGeometry(.03,.03,.2,6),0x3a2a1a,0,0,0));}
+      else{w.add(smesh(new THREE.CylinderGeometry(.03,.035,1.6,6),0x3a2a1a,0,.3,0));const o=new THREE.Mesh(new THREE.OctahedronGeometry(.12,0),new THREE.MeshBasicMaterial({color:0x9a5aff}));o.position.y=1.15;w.add(o);}}}
+  if(d.eyes){for(const s of[-1,1]){const e=new THREE.Mesh(new THREE.SphereGeometry(.05,6,4),new THREE.MeshBasicMaterial({color:0xff2020}));e.position.set(s*.13,d.h*.78,d.h*.55);g.add(e);}}
+  const mixer=new THREE.AnimationMixer(inner);const p={g,legs:[],body,mixer,clips:src.clips,a:d.a,cur:null,curN:'',lock:0,pf:0};skPlay(p,d.a.idle);return p;}
+// wrap TYPES model builders: use 3D model when ready, old one otherwise
+for(const k in MOBGLB){const t=TYPES[k];if(!t)continue;const old=t.model||null;t.model=()=>mobReady(k)?glbMob(k):(old?old():beastOld(t));}
+function beastOld(t){const tt=Object.assign({},t);delete tt.model;return beast(tt);}
+function mobSwap(k){for(const m of mobs){if(m.dead||m.type!==k||m.p.mixer)continue;const g0=m.p.g,np=glbMob(k);np.g.position.copy(g0.position);np.g.rotation.y=g0.rotation.y;scene.remove(g0);scene.add(np.g);m.p=np;}}
 function skPlay(p,n,once,ts){const c=p.clips[n];if(!c)return 0;const a=p.mixer.clipAction(c);a.reset();a.setLoop(once?THREE.LoopOnce:THREE.LoopRepeat,Infinity);a.clampWhenFinished=!!once;a.timeScale=ts||1;
   if(p.cur&&p.cur!==a)a.crossFadeFrom(p.cur,.15,false);a.play();p.cur=a;p.curN=n;return c.duration/(ts||1);}
 const skBolts=[];
-function skelTick(m,mv,dt){const p=m.p;p.mixer.update(dt);if(p.lock>0){p.lock-=dt;return;}
-  if(m.lunge>.15&&!m.didAtk){m.didAtk=1;p.lock=skPlay(p,m.t.atk,true,1.4)*.8;if(m.t.range)skBolt(m);return;}if(m.lunge<=0)m.didAtk=0;
-  const want=mv===2?'Running_A':mv===1?'Walking_D_Skeletons':(m.state==='chase'?'Idle_Combat':'Idle');if(p.curN!==want)skPlay(p,want,false,mv===2?1.1:1);}
+function skelTick(m,mv,dt){const p=m.p,A=p.a;p.mixer.update(dt);
+  if(m.flash>p.pf+.01&&p.lock<=0&&A.hit&&!(m.lunge>0)){p.lock=skPlay(p,A.hit,true,1.6)*.7;}p.pf=m.flash;
+  if(p.lock>0){p.lock-=dt;return;}
+  if(m.lunge>.15&&!m.didAtk){m.didAtk=1;p.lock=skPlay(p,A.atk,true,1.4)*.8;if(m.t.range)skBolt(m);return;}if(m.lunge<=0)m.didAtk=0;
+  const want=mv===2?A.run:mv===1?A.walk:(m.state==='chase'&&A.idle2?A.idle2:A.idle);if(p.curN!==want)skPlay(p,want,false,mv===2?1.1:1);}
 function skBolt(m){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:glowT(),color:0xa060ff,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));s.scale.setScalar(1);
   s.position.copy(m.p.g.position);s.position.y+=1.5;scene.add(s);skBolts.push({s,t:0});}
 const corpses=[];
-function skelDie(m){const p=m.p;scene.add(p.g);p.lock=0;skPlay(p,'Death_C_Skeletons',true,1.1);corpses.push({p,t:0});}
+function skelDie(m){const p=m.p;scene.add(p.g);p.lock=0;skPlay(p,p.a.die,true,1.1);corpses.push({p,t:0});}
+// NPC models
+const NPCGLB=[[/Demirci/,'Worker_Male.glb','SwordSlash'],[/Satıcı/,'Casual_Female.glb'],[/Büyücü/,'Witch.glb'],[/Muhtar/,'OldClassy_Male.glb'],[/Seyis/,'Cowboy_Male.glb'],
+  [/Kaptan/,'Viking_Male.glb'],[/Hancı/,'Chef_Female.glb'],[/Emlakçı/,'Suit_Male.glb']];
+const NPCT={};
+function npcModels(){for(const n of npcs){if(n.glb||!n.p||!n.p.g||!n.p.g.isObject3D||n.pseudo)continue;const r=NPCGLB.find(x=>x[0].test(n.name));if(!r)continue;n.glb=1;
+  glbLoad(r[1],()=>{if(!NPCT[r[1]])NPCT[r[1]]=glbTemplate(r[1],2.1);const T=NPCT[r[1]],inner=THREE.SkeletonUtils.clone(T.scene);inner.scale.setScalar(T.s);
+    for(const c of n.p.g.children)c.visible=false;n.p.g.add(inner);n.mixer=new THREE.AnimationMixer(inner);const act=r[2]||'Idle';const p={mixer:n.mixer,clips:T.clips,cur:null};skPlay(p,act,false,r[2]?.7:1);});}}
+function npcAnimTick(dt){for(const n of npcs)if(n.mixer&&n.pos.distanceTo(pl.pos)<45)n.mixer.update(dt);}
+let mobPre=false;
+function mobModelsTick(dt){if(!started)return;if(!mobPre){mobPre=true;setTimeout(()=>{['wolf','dwolf','boar','pirate'].forEach(k=>mobPreload(k,()=>mobSwap(k)));npcModels();},1500);}
+  if((isNight||inDungeon)&&!(GLBF['Skeleton_Warrior.glb']&&GLBF['Skeleton_Warrior.glb'].state!=='new')){['skwar','skmage','skel'].forEach(k=>mobPreload(k,()=>mobSwap(k)));}
+  npcAnimTick(dt);}
 // graveyards
 const GRAVES=[{x:-34,z:34},{x:30,z:52},{x:-70,z:10}];
 GRAVES.forEach((gv,gi)=>{const g=new THREE.Group();g.position.set(gv.x,0,gv.z);
@@ -6168,9 +6206,9 @@ function graveTick(dt){
   for(let i=corpses.length-1;i>=0;i--){const c=corpses[i];c.t+=dt;c.p.mixer.update(dt);if(c.t>2.2)c.p.g.position.y-=dt*.8;if(c.t>3.4){scene.remove(c.p.g);corpses.splice(i,1);}}
   for(let i=skBolts.length-1;i>=0;i--){const b=skBolts[i];b.t+=dt;const k=Math.min(1,b.t/.35);b.s.position.lerp(skTmpV.set(pl.pos.x,1.3,pl.pos.z),k);b.s.material.opacity=1-b.t/.5;if(b.t>.5){scene.remove(b.s);skBolts.splice(i,1);}}
 for(const gv of GRAVES)gv.mist.material.opacity+=((isNight?.35:0)-gv.mist.material.opacity)*Math.min(1,dt);
-  if(isNight&&!SKEL.ready){skelLoad();return;}
+  if(isNight&&!(mobReady('skwar')&&mobReady('skmage')))return;
   if(gvWasNight!==isNight){if(gvWasNight&&!isNight){let n=0;for(const gv of GRAVES)for(const m of gv.mobs)if(!m.dead){m.dead=true;m.label.remove();scene.remove(m.p.g);n++;}if(n&&Math.hypot(pl.pos.x+20,pl.pos.z-30)<80)toast('🌅 Şafak söktü, iskeletler toprağa döndü','#ffe7b0');}gvWasNight=isNight;}
-  if(!isNight||!SKEL.ready||inDungeon)return;
+  if(!isNight||!mobReady('skwar')||!mobReady('skmage')||inDungeon)return;
   for(const gv of GRAVES){gv.mobs=gv.mobs.filter(m=>!m.dead);if(gv.mobs.length)continue;if(gv.re>0){gv.re-=dt;continue;}
     const d=Math.hypot(gv.x,gv.z),lvl=clamp(zoneFor(d).lvl+3,1,40);
     ['skwar','skwar','skmage'].forEach((k,i)=>{const a=i*2.1+rand(-.4,.4),x=gv.x+Math.cos(a)*3,z=gv.z+Math.sin(a)*3,m=spawnMob(k,lvl+(i===2?1:0),x,z,{x:gv.x,z:gv.z});
@@ -6345,7 +6383,7 @@ function drawBig(){if(regionOf(pl.pos.x)===2){drawBig2();return;}const W=840,R=4
   const rings=[[WR,'#2a2a34'],[68,'#4a3a28'],[44,'#3d5a28']];for(const [r,c] of rings){bctx.fillStyle=c;bctx.beginPath();bctx.arc(R,R,r*sc,0,7);bctx.fill();}
   bctx.fillStyle='#b79a6a';bctx.beginPath();bctx.arc(R,R,VILLAGE*sc,0,7);bctx.fill();
   bctx.font='bold 22px Inter,sans-serif';bctx.textAlign='center';bctx.fillStyle='#ffffffcc';
-  bctx.fillText('KÖY',R,R+8);bctx.fillText('Kurtlar',R,R-32*sc);bctx.fillText('Yaban Domuzları',R,R-56*sc);bctx.fillText('Kara Kurtlar',R,R-80*sc);
+  bctx.fillText('KÖY',R,R+8);bctx.fillText('Kurtlar',R,R-32*sc);bctx.fillText('Kızgın Boğalar',R,R-56*sc);bctx.fillText('Kara Kurtlar',R,R-80*sc);
   for(const n of npcs){const [x,y]=T(n.pos.x,n.pos.z);bctx.fillStyle='#6ac8ff';bctx.beginPath();bctx.arc(x,y,8,0,7);bctx.fill();}
   for(const st of stones){const [x,y]=T(st.x,st.z);bctx.fillStyle='#ff2a55';bctx.strokeStyle='#fff';bctx.lineWidth=3;bctx.beginPath();bctx.moveTo(x,y-16);bctx.lineTo(x+12,y);bctx.lineTo(x,y+16);bctx.lineTo(x-12,y);bctx.closePath();bctx.fill();bctx.stroke();
     bctx.fillStyle='#fff';bctx.font='bold 18px Inter,sans-serif';bctx.fillText('Sv.'+st.lvl,x,y+36);}
@@ -6548,7 +6586,7 @@ $('bPot').querySelector('.cd').style.transform=`scaleY(${pl.potT})`;
   for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.t+=dt;const k=f.t/f.life;
     if(f.fade){f.m.material.opacity=1-k;}else if(f.spike){f.m.position.y=k<.25?-.6+k/.25*1.0:k>.75?.4-(k-.75)/.25*1.2:.4;}else if(f.up){f.m.position.addScaledVector(f.v,dt);f.m.material.opacity=1-k;f.m.scale.setScalar((f.s0||1)*(1-k*.6));}else if(f.sp){f.v.y-=14*dt;f.m.position.addScaledVector(f.v,dt);f.m.rotation.x+=dt*8;}else{f.m.scale.setScalar(1+k*f.max);f.m.material.opacity=1-k;}
     if(k>=1){relP(f.m);fx.splice(i,1);}}
-  if((miniT%15)===0)dayUpdate();updBoss(dt);updTeles(dt);dungeonTick(dt);regionTick(dt);lifeTick(dt);craftTick(dt);debrisTick(dt);graveTick(dt);for(const b of BOSS2)updB(b,dt);if(shakeT>0)shakeT-=dt;
+  if((miniT%15)===0)dayUpdate();updBoss(dt);updTeles(dt);dungeonTick(dt);regionTick(dt);lifeTick(dt);craftTick(dt);debrisTick(dt);graveTick(dt);mobModelsTick(dt);for(const b of BOSS2)updB(b,dt);if(shakeT>0)shakeT-=dt;
   $('qBox').style.visibility=$('bossBar').style.display==='block'?'hidden':'visible';
   // camera & sun
   swordFx(dt);const portrait=innerWidth<innerHeight,bz=(bossZ+=((anyBossFight()?(BOSS2.some(b=>b.state==='fight'&&b.rad>2)?1.6:1.35):1)*(riding?1.25:1)-bossZ)*Math.min(1,dt*2)),D=(portrait?15:12.5)*camZoom*bz,H=(portrait?18:15)*camPitch*camZoom*bz+.6*(1-camZoom);camOff.set(Math.sin(camYaw)*D,H,Math.cos(camYaw)*D);
