@@ -79,6 +79,7 @@ label.chk{display:flex;gap:8px;align-items:center;justify-content:center;font-si
 #title .tip{color:#a99a7a;font-size:12.5px;margin-top:18px;line-height:1.6}
 #mute{top:calc(8px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));width:36px;height:36px;border-radius:50%;background:rgba(20,14,8,.72);border:1px solid #8a6a3a;color:#fff;font-size:15px}
 #top{right:56px}
+input,textarea{font-size:16px!important}
 #slotList{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:min(92vw,440px);margin:0 auto 10px}
 .sl{position:relative;display:flex;align-items:center;gap:8px;background:rgba(20,14,8,.75);border:1.5px solid #c9a35c;border-radius:12px;padding:10px;text-align:left;cursor:pointer}
 .sl.empty{border-style:dashed;opacity:.8}
@@ -265,8 +266,8 @@ label.chk{display:flex;gap:8px;align-items:center;justify-content:center;font-si
 <div class="ov" id="fbP"><div class="pn">
   <h2>☁️ Bulut Kaydı</h2>
   <p>Hesabına giriş yap, bütün karakterlerin buluta kaydedilsin. Telefonu değiştirsen de, uygulamayı silsen de giriş yapınca geri gelir.</p>
-  <input id="fbMail" type="email" autocomplete="email" placeholder="E-posta" style="width:100%;border-radius:8px;background:#0006;color:#fff;border:1px solid #8a6a3a;padding:11px;font:15px Inter;margin:5px 0">
-  <input id="fbPass" type="password" autocomplete="current-password" placeholder="Şifre (en az 6 karakter)" style="width:100%;border-radius:8px;background:#0006;color:#fff;border:1px solid #8a6a3a;padding:11px;font:15px Inter;margin:5px 0">
+  <input id="fbMail" type="email" autocomplete="email" placeholder="E-posta" style="width:100%;border-radius:8px;background:#0006;color:#fff;border:1px solid #8a6a3a;padding:11px;font:16px Inter;margin:5px 0">
+  <input id="fbPass" type="password" autocomplete="current-password" placeholder="Şifre (en az 6 karakter)" style="width:100%;border-radius:8px;background:#0006;color:#fff;border:1px solid #8a6a3a;padding:11px;font:16px Inter;margin:5px 0">
   <div id="fbMsg" style="min-height:20px;font-size:13px;font-weight:700;margin:4px 0"></div>
   <button class="btn" id="fbIn">Giriş yap</button><button class="btn g" id="fbUp">Yeni hesap oluştur</button>
   <div><button class="btn g" id="fbForgot" style="font-size:12px;padding:6px 10px">Şifremi unuttum</button><button class="btn g" data-close style="font-size:12px;padding:6px 10px">Kapat</button></div>
@@ -298,7 +299,7 @@ label.chk{display:flex;gap:8px;align-items:center;justify-content:center;font-si
   <textarea id="codeTxt" readonly style="width:100%;height:64px;border-radius:8px;background:#0006;color:#ffe7b0;border:1px solid #8a6a3a;padding:8px;font:12px monospace;resize:none"></textarea>
   <button class="btn" id="copyBtn">Kopyala</button>
   <p style="margin-top:12px">Kayıt kodunu ya da hediye kodunu yaz:</p>
-  <input id="codeIn" style="width:100%;border-radius:8px;background:#0006;color:#fff;border:1px solid #8a6a3a;padding:10px;font:13px monospace" placeholder="KT1-...">
+  <input id="codeIn" style="width:100%;border-radius:8px;background:#0006;color:#fff;border:1px solid #8a6a3a;padding:10px;font:16px monospace" placeholder="KT1-...">
   <div id="codeMsg" style="min-height:22px;margin-top:6px;font-weight:700"></div>
   <button class="btn" id="loadBtn">Yükle</button><button class="btn g" data-close>Kapat</button>
 </div></div>
@@ -1305,6 +1306,7 @@ function renderFb(u){const b=$('fbBox');b.style.display='block';
     :`<button class="btn" id="fbOpen" style="padding:9px 16px;font-size:14px">☁️ Buluta kaydet: Giriş yap</button>`;
   if($('fbOut'))$('fbOut').onclick=()=>{save();cloudPush();setTimeout(()=>firebase.auth().signOut(),400);};
   if($('fbOpen'))$('fbOpen').onclick=()=>{fbMsg('',1);$('fbP').classList.add('on');};}
+document.addEventListener('focusout',()=>{setTimeout(()=>{try{window.scrollTo(0,0);}catch(e){}},50);});
 function fbInit(){try{if(!firebase.apps.length)firebase.initializeApp(window.KT_FB);}catch(e){}
   const auth=firebase.auth(),fs=firebase.firestore();try{fs.settings({experimentalAutoDetectLongPolling:true,merge:true});}catch(e){}
   const cred=()=>[$('fbMail').value.trim(),$('fbPass').value];
@@ -1314,7 +1316,10 @@ function fbInit(){try{if(!firebase.apps.length)firebase.initializeApp(window.KT_
   auth.onAuthStateChanged(async u=>{fbUser=u;renderFb(u);
     if(!u){cloudCol=null;readyPlay();setSaveInfo('📱 Kayıt sadece bu cihazda. Kaybolmasın diye buluta giriş yap.');return;}
     renderSlots(true);setSaveInfo('⏳ Bulut kaydı yükleniyor...');
-    const col=fs.collection('saves').doc(u.uid).collection('slots');
+    const raw=fs.collection('saves').doc(u.uid).collection('slots');
+    // Firestore cannot store nested arrays (efsun lists), so each save is stored as one JSON string
+    const col={doc:id=>{const r=raw.doc(id);return {get:()=>r.get().then(sn=>({exists:sn.exists,data:()=>{const v=sn.data()||{};try{return typeof v.d==='string'?JSON.parse(v.d):v;}catch(e){return {};}}})),
+      set:o=>r.set({d:JSON.stringify(o),ts:o.ts||0}),delete:()=>r.delete()};}};
     try{const snaps=await Promise.all([0,1,2,3].map(i=>col.doc(slotDoc(i)).get()));cloudCol=col;
       snaps.forEach((sn,i)=>{const d=sn&&sn.exists?pick(sn.data()||{}):null,loc=slots[i];
         if(d&&(d.ts||0)>((loc&&loc.ts)||0)){slots[i]=d;try{localStorage.setItem(slotKey(i),JSON.stringify(d));}catch(e){}}
