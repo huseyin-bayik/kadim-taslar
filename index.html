@@ -1616,7 +1616,8 @@ $('loadBtn').onclick=()=>{const g=$('codeIn').value.trim().toUpperCase();
     S.gift=1;S.gold+=500000;S.scrolls+=25;S.pots+=40;save();cloudPush();hud();m.style.color='#ffd77a';m.textContent='🎁 +500.000 altın, 25 Kutsama Kağıdı, 40 İksir!';
     tone(784,.15);setTimeout(()=>tone(1046,.15),120);setTimeout(()=>tone(1318,.4),240);return;}
   try{const v=$('codeIn').value.trim();if(!v.startsWith('KT1-'))throw 0;const d=pick(JSON.parse(atob(v.slice(4))));if(!d.lvl)throw 0;
-  applySave(d);save();cloudPush();$('codeTxt').value=toCode();$('codeMsg').style.color='#c9f27a';$('codeMsg').textContent=`Yüklendi! Seviye ${S.lvl}`;}
+  const j=slots.findIndex(x=>!x);if(j<0){$('codeMsg').style.color='#ff8a7a';$('codeMsg').textContent='Boş slot yok. Önce bir karakteri sil (🗑), sonra tekrar dene.';return;}
+  curSlot=j;applySave(d);save();cloudPush();renderSlots();$('codeTxt').value=toCode();$('codeMsg').style.color='#c9f27a';$('codeMsg').textContent=`Yüklendi! ${CLS[S.cls||0].n} · Seviye ${S.lvl} → ${j+1}. slota eklendi`;}
   catch(e){$('codeMsg').style.color='#ff8a7a';$('codeMsg').textContent='Kod geçersiz, tekrar kontrol et.';}};
 $('respawn').onclick=()=>{if(riding)setRide(false);if(inDungeon)exitDungeon();pl.dead=false;pl.hp=maxHp();pl.pos.set(0,0,4);$('dead').classList.remove('on');hud();};
 
