@@ -554,7 +554,7 @@ function cleanItem(o){if(!o||typeof o!=='object'||!KINDS[o.k])return null;const 
 const defS=()=>({lvl:1,exp:0,gold:120,plus:0,pots:5,scrolls:1,ts:0,inv:[],eq:null,rer:0,addb:0,auto:0,book:0,cls:0});
 const S=defS();
 function resetS(){for(const k of Object.keys(S))delete S[k];Object.assign(S,defS());}
-const KEYS=['cls','queenK','pet','pets','horse','lvl','exp','gold','plus','pots','scrolls','ts','gift','rer','addb','auto','book','sp','skb','soul','bossK','qi','qc','dlast','dstreak'];
+const KEYS=['created','cls','queenK','pet','pets','horse','lvl','exp','gold','plus','pots','scrolls','ts','gift','rer','addb','auto','book','sp','skb','soul','bossK','qi','qc','dlast','dstreak'];
 const pick=o=>{const r={};for(const k of KEYS)if(typeof o[k]==='number'&&isFinite(o[k]))r[k]=o[k];
   if(Array.isArray(o.inv))r.inv=o.inv.map(cleanItem).filter(Boolean).slice(0,INV);
   if(o.sk&&typeof o.sk==='object'){r.sk={};for(const k of ['dash','spin','roar','quake'])r.sk[k]=clamp(o.sk[k]|0,0,31);}
@@ -1268,7 +1268,7 @@ let pickSlot=0;
 function openClassPick(i){pickSlot=i;$('clsList').innerHTML=CLS.map((c,j)=>`<div class="cc" data-c="${j}"><div class="ce">${c.e}</div><div class="ct"><b>${c.n}</b><small>${c.d}</small><span>${c.st}</span></div></div>`).join('');
   $('clsList').querySelectorAll('[data-c]').forEach(el=>el.onclick=()=>{$('clsP').classList.remove('on');createChar(pickSlot,+el.dataset.c);});$('clsP').classList.add('on');}
 function loadSlot(i){curSlot=i;resetS();if(slots[i])Object.assign(S,JSON.parse(JSON.stringify(slots[i])));cloudLast='';applyClass();try{localStorage.setItem('kadim_slot',i);}catch(e){}}
-function createChar(i,c){curSlot=i;resetS();S.cls=c;cloudLast='';applyClass();save();startGame();toast(`${CLS[c].e} Yeni ${CLS[c].n} doğdu! Muhtar seni bekliyor`,'#ffd77a');}
+function createChar(i,c){curSlot=i;resetS();S.cls=c;S.created=Date.now();cloudLast='';applyClass();save();startGame();toast(`${CLS[c].e} Yeni ${CLS[c].n} doğdu! Muhtar seni bekliyor`,'#ffd77a');}
 function startGame(){$('play').onclick();}
 
 // ---------------- SETTINGS / GRAPHICS / CHARACTER SWITCH ----------------
@@ -1321,9 +1321,16 @@ function fbInit(){try{if(!firebase.apps.length)firebase.initializeApp(window.KT_
     const col={doc:id=>{const r=raw.doc(id);return {get:()=>r.get().then(sn=>({exists:sn.exists,data:()=>{const v=sn.data()||{};try{return typeof v.d==='string'?JSON.parse(v.d):v;}catch(e){return {};}}})),
       set:o=>r.set({d:JSON.stringify(o),ts:o.ts||0}),delete:()=>r.delete()};}};
     try{const snaps=await Promise.all([0,1,2,3].map(i=>col.doc(slotDoc(i)).get()));cloudCol=col;
-      snaps.forEach((sn,i)=>{const d=sn&&sn.exists?pick(sn.data()||{}):null,loc=slots[i];
-        if(d&&(d.ts||0)>((loc&&loc.ts)||0)){slots[i]=d;try{localStorage.setItem(slotKey(i),JSON.stringify(d));}catch(e){}}
-        else if(loc&&(!d||(loc.ts||0)>(d.ts||0)))col.doc(slotDoc(i)).set(JSON.parse(JSON.stringify(loc))).catch(()=>{});});
+      const cloud=snaps.map(sn=>sn&&sn.exists?pick(sn.data()||{}):null),orphans=[];
+      // same slot but a different character (class differs, or local is not an older copy of the cloud one): never overwrite, keep both
+      const same=(a,b)=>(a.cls||0)===(b.cls||0)&&(a.created||0)===(b.created||0);
+      cloud.forEach((d,i)=>{const loc=slots[i];
+        if(d&&loc&&!same(d,loc)){orphans.push(loc);slots[i]=d;}
+        else if(d&&(!loc||(d.ts||0)>(loc.ts||0)))slots[i]=d;});
+      for(const o of orphans){const j=slots.findIndex(x=>!x);if(j>=0)slots[j]=o;else toast('⚠️ Slotlar dolu, bir karakter yedeklenemedi: Kayıt Kodu ile al','#ff8a7a');}
+      slots.forEach((d,i)=>{try{if(d)localStorage.setItem(slotKey(i),JSON.stringify(d));else localStorage.removeItem(slotKey(i));}catch(e){}
+        const c=cloud[i];if(d&&(!c||!same(c,d)||(d.ts||0)>(c.ts||0)))col.doc(slotDoc(i)).set(JSON.parse(JSON.stringify(d))).catch(()=>{});});
+      if(orphans.length)toast(`☁️ Bulutta farklı karakter vardı, hiçbiri silinmedi: ${orphans.length} karakter boş slota taşındı`,'#bfe3ff');
       if(started&&slots[curSlot]&&(slots[curSlot].ts||0)>(S.ts||0)){applySave(slots[curSlot]);toast(`☁️ Buluttaki kayıt yüklendi: Seviye ${S.lvl}`,'#bfe3ff');}
       setSaveInfo('☁️ Karakterlerin buluta kaydediliyor. Her cihazda giriş yapınca geri gelir.');
     }catch(e){setSaveInfo('⚠️ Buluta ulaşılamadı ('+(e.code||'bağlantı')+'), şimdilik bu cihazda kaydediliyor.');}
