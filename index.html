@@ -6101,11 +6101,20 @@ function kmMount(m){if(KM&&KM!==m){rider.remove(KM.root);KM.mixer.stopAllAction(
 function kmUnmount(){if(!KM)return;rider.remove(KM.root);for(const c of KM.rig)c.visible=true;const k=KM;KM=null;
   if(sword)attachR(sword);if(offhand)attachL(offhand);attachL(shield);}
 function kmTool(g,kind){if(KM){g.position.set(0,0,0);g.rotation.set(kind==='fish'?0:Math.PI,0,0);KM.holdR.add(g);}else P.armR.add(g);}
-function kmPlay(name,once,ts,fade){if(!KM)return 0;const clip=KM.clips[name];if(!clip)return 0;const a=KM.mixer.clipAction(clip);
+function kmPlay(name,once,ts,fade){if(!KM)return 0;const clip=KM.clips[name];if(!clip)return 0;if(KM.lo){KM.lo.fadeOut(fade||.15);KM.lo=null;}const a=KM.mixer.clipAction(clip);
   a.reset();a.setLoop(once?THREE.LoopOnce:THREE.LoopRepeat,Infinity);a.clampWhenFinished=!!once;a.timeScale=ts||1;a.enabled=true;a.setEffectiveWeight(1);
   if(KM.cur&&KM.cur!==a)a.crossFadeFrom(KM.cur,fade||.15,false);a.play();KM.cur=a;KM.curName=name;return clip.duration/(ts||1);}
 function kmShot(name,ts,lockMul){if(!KM||pl.dead)return;const d=kmPlay(name,true,ts,.1);if(d)KM.lock=d*(lockMul||.85);}
-function kmAttack(){if(!KM)return;const A=CHARMODEL.anim[KM.cls],n=A.atk[kmAtkI++%A.atk.length],c=KM.clips[n];if(!c)return;
+function kmFilt(name,upper){const key=name+(upper?'__U':'__L');if(KM.clips[key])return KM.clips[key];const c=KM.clips[name];if(!c)return null;
+  const re=/hips|upperleg|lowerleg|foot|toes|root|ik|control|heel|knee/i;const tr=c.tracks.filter(t=>{const b=t.name.split('.')[0];return upper?!re.test(b):re.test(b);});return KM.clips[key]=new THREE.AnimationClip(key,c.duration,tr);}
+const RIDEATK=['1H_Melee_Attack_Slice_Horizontal','Dualwield_Melee_Attack_Slice','Spellcast_Shoot','2H_Melee_Attack_Slice'];
+function kmRideAtk(){const n=RIDEATK[KM.cls],up=kmFilt(n,true),lo=kmFilt(CHARMODEL.common.ride,false);if(!up||!lo)return;
+  const la=KM.mixer.clipAction(lo),ua=KM.mixer.clipAction(up),ts=Math.min(2.4,Math.max(1,up.duration/Math.max(.45,pl.mountAtk||.55)));
+  if(KM.cur&&KM.cur!==ua&&KM.cur!==la)KM.cur.fadeOut(.12);if(KM.lo&&KM.lo!==la)KM.lo.fadeOut(.12);
+  la.reset();la.setLoop(THREE.LoopRepeat,Infinity);la.setEffectiveWeight(1);la.fadeIn(.1).play();
+  ua.reset();ua.setLoop(THREE.LoopOnce,1);ua.clampWhenFinished=true;ua.timeScale=ts;ua.setEffectiveWeight(1);ua.fadeIn(.08).play();
+  KM.lo=la;KM.cur=ua;KM.curName='rideatk';KM.lock=up.duration/ts*.9;kmPrevAtk=pl.atkAnim;}
+function kmAttack(){if(!KM)return;if(riding){kmRideAtk();return;}const A=CHARMODEL.anim[KM.cls],n=A.atk[kmAtkI++%A.atk.length],c=KM.clips[n];if(!c)return;
   const want=Math.max(.35,pl.atkT*1.05),ts=Math.min(2.6,Math.max(1,c.duration/want));kmShot(n,ts,.9);kmPrevAtk=pl.atkAnim;}
 function kmSkill(k){if(!KM)return;const n=CHARMODEL.anim[KM.cls].sk[k];if(n)kmShot(n,n.includes('Spinning')?1:1.25,n.includes('Spinning')?.6:.85);kmPrevAtk=pl.atkAnim;}
 function kmEvt(k){if(!KM||KM.lock>0)return;const n=CHARMODEL.common[k];if(n)kmShot(n,1.4,.7);}
@@ -6318,8 +6327,8 @@ function damage(e,mult,showCrit=true){let d=atk()*mult*rand(.9,1.1)*(1+(e.p||e.b
       for(let i=0;i<3;i++){const a=rand(0,6.28);const m=spawnMob(e.type,e.lvl-1,e.x+Math.cos(a)*3,e.z+Math.sin(a)*3);m.state='chase';sparks(m.p.g.position,0xff3355,6,.6);}}}
   hud();}
 function alertPack(m){if(!m.pack)return;for(const o of m.pack.mobs)if(!o.dead)o.state='chase';}
-function attack(){if(pl.atkT>0||pl.dead||pl.dash>0||pl.leap)return;const e=nearestEnemy(CLS[S.cls||0].range);
-  pl.atkT=.55/(1+TOT.aspd/100);pl.atkAnim=.3;tone(rand(220,260),.08,'triangle',.04,120);
+function attack(){if(pl.atkT>0||pl.dead||pl.dash>0||pl.leap)return;if(riding&&pl.jmove)return;const e=nearestEnemy(CLS[S.cls||0].range);
+  pl.atkT=.55/(1+TOT.aspd/100);pl.atkAnim=.3;if(riding)pl.mountAtk=Math.max(.55,pl.atkT*1.15);tone(rand(220,260),.08,'triangle',.04,120);
   if(e){const ep=posOf(e);pl.face=Math.atan2(ep.x-pl.pos.x,ep.z-pl.pos.z);const amb=pl.ambush;if(amb){pl.ambush=false;pl.stealthT=0;setGhost(false);}
   if(S.cls===2&&!amb){magicBolt(e);return;}
   setTimeout(()=>{if(!e.dead&&(e.p||e.boss?!e.dead:stones.includes(e)))damage(e,amb?3:1);},120);}}
@@ -6339,7 +6348,7 @@ function ensureSk(){if(!S.sk||typeof S.sk!=='object'){S.sk={dash:1,spin:1,roar:0
   if(typeof S.sp!=='number')S.sp=0;if(typeof S.skb!=='number')S.skb=0;if(typeof S.soul!=='number')S.soul=0;}
 ensureSk();
 pl.cd={dash:0,spin:0,roar:0,quake:0};pl.buffT=0;pl.buffAtk=0;pl.buffSpd=0;
-function useSkill(k){const l=S.sk[k];if(pl.dead)return;if(!l){toast(S.lvl<SK[k].req?`${SK[k].n} seviye ${SK[k].req}'te açılır`:`${SK[k].n}'yi ⭐ Beceriler'den öğren`,'#ffb0a0');return;}
+function useSkill(k){const l=S.sk[k];if(pl.dead)return;if(riding){toast('🐴 At üzerindeyken beceri kullanılamaz','#ffb0a0');return;}if(!l){toast(S.lvl<SK[k].req?`${SK[k].n} seviye ${SK[k].req}'te açılır`:`${SK[k].n}'yi ⭐ Beceriler'den öğren`,'#ffb0a0');return;}
   if(pl.cd[k]>0)return;pl.cd[k]=skCd(k);kmSkill(k);const f=skF(l),col=skCol(l);
   if(S.cls){classSkill(k,f,col,l);return;}
   if(k==='dash'){const e=nearestEnemy(8);if(e){const ep=posOf(e);pl.face=Math.atan2(ep.x-pl.pos.x,ep.z-pl.pos.z);}
@@ -6604,12 +6613,12 @@ $('bPot').querySelector('.cd').style.transform=`scaleY(${pl.potT})`;
   let mx=joy.x+((keys.KeyD||keys.ArrowRight)?1:0)-((keys.KeyA||keys.ArrowLeft)?1:0),mz=joy.y+((keys.KeyS||keys.ArrowDown)?1:0)-((keys.KeyW||keys.ArrowUp)?1:0);
   {const cs=Math.cos(camYaw),sn=Math.sin(camYaw),wx=mx*cs+mz*sn,wz=-mx*sn+mz*cs;mx=wx;mz=wz;}
   if(keys.KeyZ)camYaw+=dt*2;if(keys.KeyC)camYaw-=dt*2;
-  const ml=Math.hypot(mx,mz);let moving=false;
+  const ml=Math.hypot(mx,mz);let moving=false;pl.jmove=ml>.15;if(pl.mountAtk>0)pl.mountAtk-=dt;
   if(!pl.dead){
     if(pl.leap){leapTick(dt);}
     else if(pl.dash>0){pl.dash-=dt;pl.pos.addScaledVector(pl.dashDir,28*dt);sparks(pl.pos,pl.dashCol||0xbfe3ff,2,1);
       for(const m of targets()){if(m.dead||pl.hitSet.has(m))continue;const p=posOf(m);if(Math.hypot(p.x-pl.pos.x,p.z-pl.pos.z)<(m.p?2.2:3)){pl.hitSet.add(m);damage(m,pl.dashMult||2.2);}}}
-    else if(ml>.15){const sp=(6+TOT.spd)*(1+TOT.mspd/100+(pl.buffT>0?pl.buffSpd/100:0)+mountSpd())*(pl.slowT>0?.45:1)*fatigue('s')*Math.min(1,ml);pl.pos.x+=mx/ml*sp*dt;pl.pos.z+=mz/ml*sp*dt;pl.face=Math.atan2(mx,mz);moving=true;}
+    else if(ml>.15&&!(riding&&pl.mountAtk>0)){const sp=(6+TOT.spd)*(1+TOT.mspd/100+(pl.buffT>0?pl.buffSpd/100:0)+mountSpd())*(pl.slowT>0?.45:1)*fatigue('s')*Math.min(1,ml);pl.pos.x+=mx/ml*sp*dt;pl.pos.z+=mz/ml*sp*dt;pl.face=Math.atan2(mx,mz);moving=true;}
     else if(atkHeld){const e=nearestEnemy(S.cls===2?12:9);if(e){const ep=posOf(e),dx=ep.x-pl.pos.x,dz=ep.z-pl.pos.z,d=Math.hypot(dx,dz)-(e.p?0:1.2);
         if(d>CLS[S.cls||0].range-.4){pl.pos.x+=dx/Math.hypot(dx,dz)*6*dt;pl.pos.z+=dz/Math.hypot(dx,dz)*6*dt;pl.face=Math.atan2(dx,dz);moving=true;}else attack();}else attack();}
     pushOut(pl.pos,.45);
