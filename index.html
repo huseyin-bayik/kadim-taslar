@@ -4622,7 +4622,7 @@ function clockTower(){const tw=new THREE.Group(),K=bKit(),st=bMat('stone',0xe0d2
       const tip=new THREE.Mesh(new THREE.ConeGeometry(w*1.1,w*2.2,4),hm);tip.position.y=len-.1+w;p.add(tip);f.add(p);return p;};
     const H1=mk(.5,.09),H2=mk(.76,.055);const pin=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.08,10),gold);pin.rotation.x=Math.PI/2;pin.position.z=out+.1;f.add(pin);hands.push([H1,H2]);}
   return {g:tw,hands};}
-function clockTick(hands){const tod=((Date.now()/1000)%DAYLEN)/DAYLEN,hrs=tod*24,ha=(hrs%12)/12*Math.PI*2,ma=(hrs*60%60)/60*Math.PI*2;for(const [a,b] of hands){a.rotation.z=-ha;b.rotation.z=-ma;}}
+function clockTick(hands){const d=new Date(),hrs=d.getHours()+d.getMinutes()/60+d.getSeconds()/3600,ha=(hrs%12)/12*Math.PI*2,ma=(hrs*60%60)/60*Math.PI*2;for(const [a,b] of hands){a.rotation.z=-ha;b.rotation.z=-ma;}}
 function house(x,z,rot,wall,roof,o={}){const K=bKit();houseKit(K,wall,roof,Object.assign({seed:Math.abs(x*7+z*3)%97},o));const g=K.build();g.position.set(x,0,z);g.rotation.y=rot;
   scene.add(g);colliders.push({x,z,r:2.6});return g;}
 house(-9,-7,.6,0xe8d9b5,0x9c3b2a);house(9,-8,-.5,0xdcc9a0,0x7a4a2a);house(-10,7,2.4,0xe2d2ad,0x8a3f2c);house(10,8,-2.3,0xe8d9b5,0x9c3b2a);
